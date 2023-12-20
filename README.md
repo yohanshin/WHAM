@@ -18,7 +18,7 @@ Please see [Dataset](docs/DATASET.md) for details.
 
 
 ## Evaluation
-To evaluate the performance of our trained models, first download the trained models (ViT backbone) at GoogleDrive and store them at `checkpoints/`.
+To evaluate the performance of our trained models, first download the trained models (ViT backbone) from [Google Drive](https://drive.google.com/drive/folders/1tLpq2XQV7xU3U9cr0q6Yc_SUlYlFQBgf?usp=sharing) and store them at `checkpoints/`.
 
 ```
 # Evaluate on 3DPW dataset
