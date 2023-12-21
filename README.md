@@ -31,7 +31,10 @@ python -m scripts.evaluate_3dpw --cfg configs/yamls/demo.yaml TRAIN.CHECKPOINT c
 # Evaluate on RICH dataset
 python -m scripts.evaluate_rich --cfg configs/yamls/demo.yaml TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar
 
-# Evaluate on EMDB dataset
+# Evaluate on EMDB dataset (also computes W-MPJPE and WA-MPJPE)
+python -m scripts.evaluate_rich --cfg configs/yamls/demo.yaml --eval-split 1 TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar   # EMDB 1
+
+python -m scripts.evaluate_rich --cfg configs/yamls/demo.yaml --eval-split 2 TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar   # EMDB 2
 ```
 
 ## Training
