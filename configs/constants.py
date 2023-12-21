@@ -13,7 +13,7 @@ N_JOINTS = 17
 root = 'dataset'
 class PATHS:
     PARSED_DATA = f'{root}/parsed_data'
-    
+    EMDB_PTH = 'dataset/EMDB'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS

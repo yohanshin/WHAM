@@ -89,6 +89,8 @@ def parse_args(test=False):
     parser.add_argument('-c', '--cfg', type=str, default='./configs/debug.yaml', help='cfg file path')
     parser.add_argument(
         "--eval-set", type=str, default='3dpw', help="Evaluation dataset")
+    parser.add_argument(
+        "--eval-split", type=str, default='test', help="Evaluation data split")
     parser.add_argument('--save-results', default=False, type=bool_arg,
                         help='Save SMPL parameters after the evaluation')
     parser.add_argument(
