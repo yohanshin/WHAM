@@ -25,6 +25,7 @@ To evaluate the performance of our trained models, first download the trained mo
 python -m scripts.evaluate_3dpw --cfg configs/yamls/demo.yaml TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar
 
 # Evaluate on RICH dataset
+python -m scripts.evaluate_rich --cfg configs/yamls/demo.yaml TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar
 
 # Evaluate on EMDB dataset
 ```
