@@ -19,6 +19,8 @@ class EvalDataset(BaseDataset):
     def __init__(self, cfg, data, split, backbone):
         super(EvalDataset, self).__init__(cfg, False)
         
+        self.data = data
+        
         parsed_data_path = os.path.join(_C.PATHS.PARSED_DATA, f'{data}_{split}_{backbone}.pth')
         self.labels = joblib.load(parsed_data_path)
 
@@ -77,9 +79,12 @@ class EvalDataset(BaseDataset):
         pose_root = target['pose'][:, 0].clone()
         target['init_root'] = transforms.matrix_to_rotation_6d(pose_root)
 
-        if 'cam_angvel' in self.labels.keys():
+        if 'emdb' in self.data.lower():
+            # Use groundtruth camera angular velocity.
+            # Can be updated with SLAM results if you have it.
             cam_angvel = transforms.matrix_to_rotation_6d(R[:-1] @ R[1:].transpose(-1, -2))
             cam_angvel = (cam_angvel - torch.tensor([[1, 0, 0, 0, 1, 0]]).to(cam_angvel)) * FPS
+            target['R'] = R
         else:
             cam_angvel = torch.zeros((len(target['pose']) - 1, 6))
         target['cam_angvel'] = cam_angvel

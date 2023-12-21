@@ -312,3 +312,104 @@ def batch_align_by_pelvis(data_list, pelvis_idxs):
     target_verts = target_verts - target_pelvis
     
     return (pred_j3d, target_j3d, pred_verts, target_verts)
+
+def compute_jpe(S1, S2):
+    return torch.sqrt(((S1 - S2) ** 2).sum(dim=-1)).mean(dim=-1).numpy()
+
+
+# The functions below are borrowed from SLAHMR official implementation.
+# Reference: https://github.com/vye16/slahmr/blob/main/slahmr/eval/tools.py
+def global_align_joints(gt_joints, pred_joints):
+    """
+    :param gt_joints (T, J, 3)
+    :param pred_joints (T, J, 3)
+    """
+    s_glob, R_glob, t_glob = align_pcl(
+        gt_joints.reshape(-1, 3), pred_joints.reshape(-1, 3)
+    )
+    pred_glob = (
+        s_glob * torch.einsum("ij,tnj->tni", R_glob, pred_joints) + t_glob[None, None]
+    )
+    return pred_glob
+
+
+def first_align_joints(gt_joints, pred_joints):
+    """
+    align the first two frames
+    :param gt_joints (T, J, 3)
+    :param pred_joints (T, J, 3)
+    """
+    # (1, 1), (1, 3, 3), (1, 3)
+    s_first, R_first, t_first = align_pcl(
+        gt_joints[:2].reshape(1, -1, 3), pred_joints[:2].reshape(1, -1, 3)
+    )
+    pred_first = (
+        s_first * torch.einsum("tij,tnj->tni", R_first, pred_joints) + t_first[:, None]
+    )
+    return pred_first
+
+
+def local_align_joints(gt_joints, pred_joints):
+    """
+    :param gt_joints (T, J, 3)
+    :param pred_joints (T, J, 3)
+    """
+    s_loc, R_loc, t_loc = align_pcl(gt_joints, pred_joints)
+    pred_loc = (
+        s_loc[:, None] * torch.einsum("tij,tnj->tni", R_loc, pred_joints)
+        + t_loc[:, None]
+    )
+    return pred_loc
+
+
+def align_pcl(Y, X, weight=None, fixed_scale=False):
+    """align similarity transform to align X with Y using umeyama method
+    X' = s * R * X + t is aligned with Y
+    :param Y (*, N, 3) first trajectory
+    :param X (*, N, 3) second trajectory
+    :param weight (*, N, 1) optional weight of valid correspondences
+    :returns s (*, 1), R (*, 3, 3), t (*, 3)
+    """
+    *dims, N, _ = Y.shape
+    N = torch.ones(*dims, 1, 1) * N
+
+    if weight is not None:
+        Y = Y * weight
+        X = X * weight
+        N = weight.sum(dim=-2, keepdim=True)  # (*, 1, 1)
+
+    # subtract mean
+    my = Y.sum(dim=-2) / N[..., 0]  # (*, 3)
+    mx = X.sum(dim=-2) / N[..., 0]
+    y0 = Y - my[..., None, :]  # (*, N, 3)
+    x0 = X - mx[..., None, :]
+
+    if weight is not None:
+        y0 = y0 * weight
+        x0 = x0 * weight
+
+    # correlation
+    C = torch.matmul(y0.transpose(-1, -2), x0) / N  # (*, 3, 3)
+    U, D, Vh = torch.linalg.svd(C)  # (*, 3, 3), (*, 3), (*, 3, 3)
+
+    S = torch.eye(3).reshape(*(1,) * (len(dims)), 3, 3).repeat(*dims, 1, 1)
+    neg = torch.det(U) * torch.det(Vh.transpose(-1, -2)) < 0
+    S[neg, 2, 2] = -1
+
+    R = torch.matmul(U, torch.matmul(S, Vh))  # (*, 3, 3)
+
+    D = torch.diag_embed(D)  # (*, 3, 3)
+    if fixed_scale:
+        s = torch.ones(*dims, 1, device=Y.device, dtype=torch.float32)
+    else:
+        var = torch.sum(torch.square(x0), dim=(-1, -2), keepdim=True) / N  # (*, 1, 1)
+        s = (
+            torch.diagonal(torch.matmul(D, S), dim1=-2, dim2=-1).sum(
+                dim=-1, keepdim=True
+            )
+            / var[..., 0]
+        )  # (*, 1)
+
+    t = my - s * torch.matmul(R, mx[..., None])[..., 0]  # (*, 3)
+
+    return s, R, t
