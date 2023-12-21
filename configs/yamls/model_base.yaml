@@ -1,0 +1,7 @@
+architecture: 'RNN'
+in_dim: 49
+n_iters: 1
+pose_dr: 0.15
+d_embed: 512
+n_layers: 3
+layer: 'LSTM'

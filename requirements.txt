@@ -13,9 +13,6 @@ einops
 timm==0.4.9
 munkres
 xtcocotools>=1.8
-pyrender
-trimesh
-json_tricks
 loguru
 setuptools==59.5.0
 tqdm
