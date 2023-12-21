@@ -1,0 +1,12 @@
+LOGDIR: ''
+DEVICE: 'cuda'
+EXP_NAME: 'demo'
+OUTPUT_DIR: 'experiments/'
+NUM_WORKERS: 0
+MODEL_CONFIG: 'configs/yamls/model_base.yaml'
+
+TRAIN:
+  STAGE: 'stage2'
+
+MODEL:
+  BACKBONE: 'vit'
