@@ -93,7 +93,7 @@ def compute_similarity_transform(S1, S2):
     '''
     Computes a similarity transform (sR, t) that takes
     a set of 3D points S1 (3 x N) closest to a set of 3D points S2,
-    where R is an 3x3 rotation matrix, t 3x1 translation, s scale.
+    where R is a 3x3 rotation matrix, t 3x1 translation, s scale.
     i.e. solves the orthogonal Procrutes problem.
     '''
     transposed = False
@@ -144,7 +144,7 @@ def compute_similarity_transform_torch(S1, S2):
     '''
     Computes a similarity transform (sR, t) that takes
     a set of 3D points S1 (3 x N) closest to a set of 3D points S2,
-    where R is an 3x3 rotation matrix, t 3x1 translation, s scale.
+    where R is a 3x3 rotation matrix, t 3x1 translation, s scale.
     i.e. solves the orthogonal Procrutes problem.
     '''
     transposed = False
@@ -202,7 +202,7 @@ def batch_compute_similarity_transform_torch(S1, S2):
     '''
     Computes a similarity transform (sR, t) that takes
     a set of 3D points S1 (3 x N) closest to a set of 3D points S2,
-    where R is an 3x3 rotation matrix, t 3x1 translation, s scale.
+    where R is a 3x3 rotation matrix, t 3x1 translation, s scale.
     i.e. solves the orthogonal Procrutes problem.
     '''
     transposed = False
