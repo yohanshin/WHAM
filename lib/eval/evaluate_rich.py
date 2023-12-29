@@ -106,6 +106,7 @@ def main(cfg, args):
     for k, v in accumulator.items():
         accumulator[k] = np.concatenate(v).mean()
 
+    print('')
     log_str = 'Evaluation on RICH, '
     log_str += ' '.join([f'{k.upper()}: {v:.4f},'for k,v in accumulator.items()])
     logger.info(log_str)

@@ -91,6 +91,8 @@ def parse_args(test=False):
         "--eval-set", type=str, default='3dpw', help="Evaluation dataset")
     parser.add_argument(
         "--eval-split", type=str, default='test', help="Evaluation data split")
+    parser.add_argument('--render', default=False, type=bool_arg,
+                        help='Render SMPL meshes after the evaluation')
     parser.add_argument('--save-results', default=False, type=bool_arg,
                         help='Save SMPL parameters after the evaluation')
     parser.add_argument(

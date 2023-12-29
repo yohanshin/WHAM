@@ -1,9 +1,11 @@
 import os
 import time
 import os.path as osp
+from glob import glob
 from collections import defaultdict
 
 import torch
+import imageio
 import numpy as np
 from smplx import SMPL
 from loguru import logger
@@ -21,6 +23,13 @@ from lib.eval.eval_utils import (
 from lib.utils import transforms
 from lib.utils.utils import prepare_output_dir
 from lib.utils.utils import prepare_batch
+
+try:
+    from lib.utils.renderer import Renderer
+    _render = True
+except:
+    print("PyTorch3D is not properly installed! Cannot render the SMPL mesh")
+    _render = False
 
 m2mm = 1e3
 @torch.no_grad()
@@ -99,9 +108,42 @@ def main(cfg, args):
             accumulator['accel'].append(accel)
             # =======>
             
+            # <======= (Optional) Render the prediction
+            if not (_render and args.render):
+                # Skip if PyTorch3D is not installed or rendering argument is not parsed.
+                continue
+            
+            # Save path
+            viz_pth = osp.join('output', 'visualization')
+            os.makedirs(viz_pth, exist_ok=True)
+            
+            # Build Renderer
+            width, height = batch['cam_intrinsics'][0][0, :2, -1].numpy() * 2
+            focal_length = batch['cam_intrinsics'][0][0, 0, 0].item()
+            renderer = Renderer(width, height, focal_length, cfg.DEVICE, smpl['neutral'].faces)
+            
+            # Get images and writer
+            frame_list = batch['frame_id'][0].numpy()
+            imname_list = sorted(glob(osp.join(_C.PATHS.THREEDPW_PTH, 'imageFiles', batch['vid'][0][:-2], '*.jpg')))
+            writer = imageio.get_writer(osp.join(viz_pth, batch['vid'][0] + '.mp4'), 
+                                        mode='I', format='FFMPEG', fps=30, macro_block_size=1)
+            
+            # Skip the invalid frames
+            for i, frame in enumerate(frame_list):
+                image = imageio.imread(imname_list[frame])
+                
+                # NOTE: pred['verts'] is different from pred_verts as we substracted offset from SMPL mesh.
+                # Check line 121 in lib/models/smpl.py
+                vertices = pred['verts'][i] + pred['trans_cam'][[i]]
+                image = renderer.render_mesh(vertices, image)
+                writer.append_data(image)
+            writer.close()
+            # =======>
+            
     for k, v in accumulator.items():
         accumulator[k] = np.concatenate(v).mean()
 
+    print('')
     log_str = 'Evaluation on 3DPW, '
     log_str += ' '.join([f'{k.upper()}: {v:.4f},'for k,v in accumulator.items()])
     logger.info(log_str)

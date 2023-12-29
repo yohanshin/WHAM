@@ -13,15 +13,16 @@ N_JOINTS = 17
 root = 'dataset'
 class PATHS:
     PARSED_DATA = f'{root}/parsed_data'
-    EMDB_PTH = 'dataset/EMDB'
+    THREEDPW_PTH = f'{root}/3DPW'
+    RICH_PTH = f'{root}/RICH'
+    EMDB_PTH = f'{root}/EMDB'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS
     H36M_TO_J17 = [6, 5, 4, 1, 2, 3, 16, 15, 14, 11, 12, 13, 8, 10, 0, 7, 9]
     H36M_TO_J14 = H36M_TO_J17[:14]
     J17_TO_H36M = [14, 3, 4, 5, 2, 1, 0, 15, 12, 16, 13, 9, 10, 11, 8, 7, 6]
-    COCO_AUG_DICT = {17: f'{root}/body_models/coco_aug_dict.pth', 
-                     23: f'{root}/body_models/coco+feet_aug_dict.pth'}[N_JOINTS]
+    COCO_AUG_DICT = f'{root}/body_models/coco_aug_dict.pth'
     TREE = [[5, 6], 0, 0, 1, 2, -1, -1, 5, 6, 7, 8, -1, -1, 11, 12, 13, 14, 15, 15, 15, 16, 16, 16]
 
     # STD scale for video noise
