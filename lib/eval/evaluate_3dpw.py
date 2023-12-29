@@ -137,6 +137,7 @@ def main(cfg, args):
                 vertices = pred['verts'][i] + pred['trans_cam'][[i]]
                 image = renderer.render_mesh(vertices, image)
                 writer.append_data(image)
+            writer.close()
             # =======>
             
     for k, v in accumulator.items():
