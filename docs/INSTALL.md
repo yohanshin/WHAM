@@ -21,4 +21,4 @@ pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/whee
 pip install -r requirements.txt
 ```
 
-Once you install all dependencies, you may need to delete the following line at `<YOUR-CONDA-PTH>/envs/mifi/lib/python3.9/site-packages/chumpy/__init__.py:line 8` that starts with `from numpy import ...`.
+Once you install all dependencies, you may need to delete the following line at `<YOUR-CONDA-PTH>/envs/wham/lib/python3.9/site-packages/chumpy/__init__.py:line 8` that starts with `from numpy import ...`.
