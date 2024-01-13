@@ -5,6 +5,7 @@ WHAM has been implemented and tested on Ubuntu 20.04 and 22.04 with python = 3.9
 ```bash
 # Clone the repo
 git clone https://github.com/yohanshin/WHAM.git --recursive
+cd DPVO/
 
 # Create Conda environment
 conda create -n wham python=3.9
@@ -24,7 +25,7 @@ pip install -r requirements.txt
 pip install -v -e third-party/ViTPose
 
 # Install DPVO
-cd lib/models/third-party/DPVO
+cd third-party/DPVO
 wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
 unzip eigen-3.4.0.zip -d thirdparty && rm -rf eigen-3.4.0.zip
 conda install pytorch-scatter=2.0.9 -c rusty1s
