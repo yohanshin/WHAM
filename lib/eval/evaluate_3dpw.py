@@ -25,7 +25,7 @@ from lib.utils.utils import prepare_output_dir
 from lib.utils.utils import prepare_batch
 
 try:
-    from lib.utils.renderer import Renderer
+    from lib.vis.renderer import Renderer
     _render = True
 except:
     print("PyTorch3D is not properly installed! Cannot render the SMPL mesh")
@@ -134,7 +134,7 @@ def main(cfg, args):
                 
                 # NOTE: pred['verts'] is different from pred_verts as we substracted offset from SMPL mesh.
                 # Check line 121 in lib/models/smpl.py
-                vertices = pred['verts'][i] + pred['trans_cam'][[i]]
+                vertices = pred['verts_cam'][i] + pred['trans_cam'][[i]]
                 image = renderer.render_mesh(vertices, image)
                 writer.append_data(image)
             writer.close()

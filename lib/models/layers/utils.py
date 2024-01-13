@@ -3,11 +3,13 @@ from lib.utils import transforms
 
 
 
-def rollout_global_motion(root_r, root_v):
+def rollout_global_motion(root_r, root_v, init_trans=None):
     b, f = root_v.shape[:2]
     root = transforms.rotation_6d_to_matrix(root_r[:])
     vel_world = (root[:, :-1] @ root_v.unsqueeze(-1)).squeeze(-1)
     trans = torch.cumsum(vel_world, dim=1)
+    
+    if init_trans is not None: trans = trans + init_trans
     return root[:, 1:], trans
 
 def compute_camera_motion(output, root_c_d6d, root_w, trans, pred_cam):
@@ -17,6 +19,7 @@ def compute_camera_motion(output, root_c_d6d, root_w, trans, pred_cam):
     pelvis_world = (cam_R.mT @ pelvis_cam.unsqueeze(-1)).squeeze(-1)
     cam_T_world = pelvis_world - trans
     cam_T = (cam_R @ cam_T_world.unsqueeze(-1)).squeeze(-1)
+    
     return cam_R, cam_T
 
 def compute_camera_pose(root_c_d6d, root_w):
@@ -41,8 +44,9 @@ def reset_root_velocity(smpl, output, stationary, pred_ori, pred_vel, thr=0.7):
     feet_vel = torch.cat((torch.zeros_like(feet_vel[:, :1]), feet_vel), dim=1)
     
     stationary_vel = feet_vel * stationary_mask
-    del_vel = stationary_vel.mean(dim=2)
+    del_vel = stationary_vel.sum(dim=2) / ((stationary_vel != 0).sum(dim=2) + 1e-4)
     vel_world_update = vel_world - del_vel
     
     vel_root = (poses_root[:, 1:].mT @ vel_world_update.unsqueeze(-1)).squeeze(-1)
+    
     return vel_root

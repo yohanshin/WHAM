@@ -8,7 +8,7 @@ from torch import nn
 from configs import constants as _C
 from lib.utils import transforms
 from lib.models.layers import (MotionEncoder, MotionDecoder, TrajectoryDecoder, TrajectoryRefiner, Integrator, 
-                               rollout_global_motion, compute_camera_pose, reset_root_velocity)
+                               rollout_global_motion, compute_camera_pose, reset_root_velocity, compute_camera_motion)
 
 
 class Network(nn.Module):
@@ -61,6 +61,25 @@ class Network(nn.Module):
     def __version__(self, ):
         return 'v07'
     
+    def compute_global_feet(self, duplicate=False):
+        # Global motion
+        init_trans = None# if self.training else self.output.full_cam.reshape(self.b, self.f, 3)[:, [0]]
+        root_world, trans = rollout_global_motion(self.pred_root, self.pred_vel, init_trans)
+        
+        # # Compute world-coordinate motion
+        # if not duplicate:
+        #     self.global_output = self.smpl.get_output(
+        #         global_orient=root_world.reshape(self.b * self.f, 1, 3, 3), body_pose=self.output.body_pose,
+        #         betas=self.output.betas, pose2rot=False
+        #     )
+        # feet_world = self.global_output.feet.reshape(self.b, self.f, 4, 3) + trans.unsqueeze(-2)
+        
+        cam_R, cam_T = compute_camera_motion(self.output, self.pred_pose[:, :, :6], root_world, trans, self.pred_cam)
+        feet_cam = self.output.feet.reshape(self.b, self.f, -1, 3) + self.output.full_cam.reshape(self.b, self.f, 1, 3)
+        feet_world = (cam_R.mT @ (feet_cam - cam_T.unsqueeze(-2)).mT).mT
+        
+        return feet_world
+    
     def forward_smpl(self, **kwargs):
         self.output = self.smpl(self.pred_pose, 
                                 self.pred_shape,
@@ -70,22 +89,17 @@ class Network(nn.Module):
                                 )
         kp3d = self.output.joints
         
-        # Global motion
-        root_world, trans = rollout_global_motion(self.pred_root, self.pred_vel)
+        # Feet location in global coordinate
+        feet_world = self.compute_global_feet()
         
-        # Compute world-coordinate motion
-        self.global_output = self.smpl.get_output(
-            global_orient=root_world.reshape(self.b * self.f, 1, 3, 3), body_pose=self.output.body_pose,
-            betas=self.output.betas, pose2rot=False
-        )
-        feet_world = self.global_output.feet.reshape(self.b, self.f, 4, 3) + trans.unsqueeze(-2)
-        
+        # Return output
         output = {'feet': feet_world,
                   'contact': self.pred_contact,
                   'pose': self.pred_pose, 
                   'betas': self.pred_shape, 
                   'poses_root_cam': self.output.global_orient,
-                  'verts': self.output.vertices}
+                  'verts_cam': self.output.vertices}
+        
         if self.training:
             pass     # TODO: Update training code
         else:
@@ -99,7 +113,7 @@ class Network(nn.Module):
         return output        
     
     def forward(self, x, inits, img_features=None, mask=None, init_root=None, cam_angvel=None,
-                cam_intrinsics=None, bbox=None, res=None, **kwargs):
+                cam_intrinsics=None, bbox=None, res=None, return_y_up=False, **kwargs):
         self.b, self.f = x.shape[:2]
         init_kp, init_smpl = inits
         
@@ -144,7 +158,13 @@ class Network(nn.Module):
         
         # --------- Refine trajectory --------- #
         update_vel = reset_root_velocity(self.smpl, self.output, pred_contact, pred_root, pred_vel, thr=0.5)
-        output = self.trajectory_refiner(old_motion_context, update_vel, output, cam_angvel)
+        # update_vel = pred_vel.clone()
+        
+        if not self.training:
+            self.pred_vel = update_vel.clone()
+            output['feet'] = self.compute_global_feet(True)
+            
+        output = self.trajectory_refiner(old_motion_context, update_vel, output, cam_angvel, return_y_up=return_y_up)
         # --------- #
         
         return output
