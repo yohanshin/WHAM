@@ -7,6 +7,7 @@ MODEL_CONFIG: 'configs/yamls/model_base.yaml'
 
 TRAIN:
   STAGE: 'stage2'
+  CHECKPOINT: 'checkpoints/wham_vit_bedlam_w_3dpw.pth.tar'
 
 MODEL:
   BACKBONE: 'vit'

@@ -3,9 +3,11 @@ from __future__ import print_function
 from __future__ import division
 
 import torch
+import numpy as np
 from torch import nn
 from configs import constants as _C
 from .utils import rollout_global_motion
+from lib.utils.transforms import axis_angle_to_matrix
 
 
 class Regressor(nn.Module):
@@ -226,9 +228,8 @@ class TrajectoryRefiner(nn.Module):
         d_input = d_embed + 12
         self.refiner = Regressor(
             d_input, d_hidden, [6, 3], 9, rnn_type, n_layers)
-    
 
-    def forward(self, context, pred_vel, output, cam_angvel):
+    def forward(self, context, pred_vel, output, cam_angvel, return_y_up):
         b, f = context.shape[:2]
         
         # Register values
@@ -240,12 +241,18 @@ class TrajectoryRefiner(nn.Module):
         feet_vel = torch.cat((torch.zeros_like(feet[:, :1]), feet[:, 1:] - feet[:, :-1]), dim=1) * 30   # Normalize to 30 times
         feet = (feet_vel * contact.unsqueeze(-1)).reshape(b, f, -1)  # Velocity input
         inpt_feat = torch.cat([context, feet], dim=-1)
-
+        
         (delta_root, delta_vel), _, _ = self.refiner(inpt_feat, [pred_root[:, 1:], pred_vel], h0=None)
         pred_root[:, 1:] = pred_root[:, 1:] + delta_root
         pred_vel = pred_vel + delta_vel
 
         root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
+        
+        if return_y_up:
+            yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
+            root_world = yup2ydown.mT @ root_world
+            trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
+            
         output.update({
             'poses_root_r6d_refined': pred_root,
             'vel_root_refined': pred_vel,

@@ -10,11 +10,30 @@ https://github.com/yohanshin/WHAM/assets/46889727/da4602b4-0597-4e64-8da4-ab0693
 This repository is the official [Pytorch](https://pytorch.org/) implementation of [WHAM: Reconstructing World-grounded Humans with Accurate 3D Motion](https://arxiv.org/abs/2312.07531). For more information, please visit our [project page](https://wham.is.tue.mpg.de/).
 
 
-
 ## Installation
 Please see [Installation](docs/INSTALL.md) for details.
 
 
+## Quick Demo
+### Registration
+
+To download SMPL body models (Neutral, Female, and Male), you need to register for [SMPL](https://smpl.is.tue.mpg.de/) and [SMPLify](https://smplify.is.tue.mpg.de/). The username and password for both homepages will be used while fetching the demo data.
+
+Next, run the following script to fetch demo data. This script will download all the required dependencies including trained models and demo videos.
+
+```bash
+bash fetch_demo_data.sh
+```
+
+You can try with one examplar video:
+```
+python demo.py --video examples/IMG_9732.mov --visualize
+```
+
+We assume camera focal length following [CLIFF](https://github.com/haofanwang/CLIFF). You can specify known camera intrinsics [fx fy cx cy] for SLAM as the demo example below:
+```
+python demo.py --video examples/drone_video.mp4 --calib examples/drone_calib.txt --visualize
+```
 
 ## Dataset
 Please see [Dataset](docs/DATASET.md) for details.
@@ -22,8 +41,6 @@ Please see [Dataset](docs/DATASET.md) for details.
 
 
 ## Evaluation
-To evaluate the performance of our trained models, first download the trained models (ViT backbone) from [Google Drive](https://drive.google.com/drive/folders/1tLpq2XQV7xU3U9cr0q6Yc_SUlYlFQBgf?usp=sharing) and store them at `checkpoints/`.
-
 ```
 # Evaluate on 3DPW dataset
 python -m lib.eval.evaluate_3dpw --cfg configs/yamls/demo.yaml TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar
@@ -51,7 +68,7 @@ The base implementation is largely borrowed from [VIBE](https://github.com/mkoca
 
 - [x] Colab / Hugging face release
 
-- [x] Demo for custom videos
+- [o] Demo for custom videos
 
 ## Citation
 ```

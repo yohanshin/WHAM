@@ -10,7 +10,6 @@ import numpy as np
 from configs import constants as _C
 import lib.utils.data_utils as d_utils
 from lib.utils import transforms
-from lib.models import build_body_model
 from lib.utils.kp_utils import root_centering
 from lib.data._dataset import BaseDataset
 

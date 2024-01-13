@@ -1,0 +1,6 @@
+[submodule "third-party/DPVO"]
+	path = third-party/DPVO
+	url = https://github.com/princeton-vl/DPVO.git
+[submodule "third-party/ViTPose"]
+	path = third-party/ViTPose
+	url = https://github.com/ViTAE-Transformer/ViTPose.git

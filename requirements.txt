@@ -1,5 +1,5 @@
-chumpy
-numpy
+chumpy @ git+https://github.com/mattloper/chumpy
+numpy==1.22.3
 yacs
 joblib
 scikit-image
@@ -10,9 +10,12 @@ tensorboard
 smplx
 progress
 einops
+mmcv==1.3.9
 timm==0.4.9
 munkres
 xtcocotools>=1.8
 loguru
 setuptools==59.5.0
 tqdm
+ultralytics
+gdown==4.6.0
