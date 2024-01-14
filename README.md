@@ -64,11 +64,11 @@ The base implementation is largely borrowed from [VIBE](https://github.com/mkoca
 
 ## TODO
 
-- [x] Training implementation
+- [ ] Training implementation
 
-- [x] Colab / Hugging face release
+- [ ] Colab / Hugging face release
 
-- [o] Demo for custom videos
+- [x] Demo for custom videos
 
 ## Citation
 ```
