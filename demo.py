@@ -101,7 +101,7 @@ def run(cfg,
         results[_id]['trans_world'] = pred['trans_world'].cpu().squeeze(0).numpy()
         results[_id]['frame_id'] = frame_id
         
-    # Visualize
+    # Visualizeimport pdb; pdb.set_trace()
     if visualize:
         from lib.vis.run_vis import run_vis_on_demo
         run_vis_on_demo(cfg, video, results, output_pth, network.smpl, vis_global=True)
