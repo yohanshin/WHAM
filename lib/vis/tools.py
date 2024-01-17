@@ -171,7 +171,7 @@ def checkerboard_geometry(
     color0 = np.array(color0 + [alpha])
     color1 = np.array(color1 + [alpha])
     radius = length / 2.0
-    num_rows = num_cols = int(length / tile_width)
+    num_rows = num_cols = max(2, int(length / tile_width))
     vertices = []
     vert_colors = []
     faces = []
