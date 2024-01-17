@@ -19,16 +19,22 @@ from progress.bar import Bar
 from configs.config import get_cfg_defaults
 from lib.data._custom import CustomDataset
 from lib.models import build_network, build_body_model
-from lib.models.preproc.slam import SLAMModel
 from lib.models.preproc.detector import DetectionModel
 from lib.models.preproc.extractor import FeatureExtractor
 
+try: 
+    from lib.models.preproc.slam import SLAMModel
+    _run_global = True
+except: 
+    logger.info('DPVO is not properly installed. Only estimate in local coordinates !')
+    _run_global = False
 
 def run(cfg,
         video,
         output_pth,
         network,
         calib=None,
+        run_global=True,
         visualize=False):
     
     cap = cv2.VideoCapture(video)
@@ -37,13 +43,18 @@ def run(cfg,
     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width, height = cap.get(cv2.CAP_PROP_FRAME_WIDTH), cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
     
+    # Whether or not estimating motion in global coordinates
+    run_global = run_global and _run_global
+    
     # Preprocess
     if not (osp.exists(osp.join(output_pth, 'tracking_results.pth')) and 
             osp.exists(osp.join(output_pth, 'slam_results.pth'))):
         
         detector = DetectionModel(cfg.DEVICE.lower())
-        slam = SLAMModel(video, output_pth, width, height, calib)
         extractor = FeatureExtractor(cfg.DEVICE.lower())
+        
+        if run_global: slam = SLAMModel(video, output_pth, width, height, calib)
+        else: slam = None
         
         bar = Bar('Preprocess: 2D detection and SLAM', fill='#', max=length)
         while (cap.isOpened()):
@@ -54,12 +65,18 @@ def run(cfg,
             detector.track(img, fps, length)
             
             # SLAM
-            slam.track()
+            if slam is not None: 
+                slam.track()
             
             bar.next()
 
         tracking_results = detector.process(fps)
-        slam_results = slam.process()
+        
+        if slam is not None: 
+            slam_results = slam.process()
+        else:
+            slam_results = np.zeros((length, 7))
+            slam_results[:, 3] = 1.0    # Unit quaternion
     
         # Extract image features
         # TODO: Merge this into the previous while loop with an online bbox smoothing.
@@ -104,7 +121,7 @@ def run(cfg,
     # Visualize
     if visualize:
         from lib.vis.run_vis import run_vis_on_demo
-        run_vis_on_demo(cfg, video, results, output_pth, network.smpl, vis_global=True)
+        run_vis_on_demo(cfg, video, results, output_pth, network.smpl, vis_global=run_global)
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -119,8 +136,11 @@ if __name__ == '__main__':
     parser.add_argument('--calib', type=str, default=None, 
                         help='Camera calibration file path')
 
+    parser.add_argument('--estimate_local_only', action='store_true',
+                        help='Only estimate motion in camera coordinate if True')
+    
     parser.add_argument('--visualize', action='store_true',
-                        help='Visualize the output mesh')
+                        help='Visualize the output mesh if True')
 
     args = parser.parse_args()
 
@@ -142,7 +162,13 @@ if __name__ == '__main__':
     os.makedirs(output_pth, exist_ok=True)
     
     with torch.no_grad():
-        run(cfg, args.video, output_pth, network, args.calib, visualize=args.visualize)
+        run(cfg, 
+            args.video, 
+            output_pth, 
+            network, 
+            args.calib, 
+            run_global=not args.estimate_local_only, 
+            visualize=args.visualize)
         
     print()
     logger.info('Done !')
