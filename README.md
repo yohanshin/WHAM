@@ -39,6 +39,11 @@ We assume camera focal length following [CLIFF](https://github.com/haofanwang/CL
 python demo.py --video examples/drone_video.mp4 --calib examples/drone_calib.txt --visualize
 ```
 
+You can skip SLAM if you only want to get camera-coordinate motion. You can run as:
+```
+python demo.py --video examples/IMG_9732.mov --visualize --estimate_local_only
+```
+
 ## Dataset
 Please see [Dataset](docs/DATASET.md) for details.
 
