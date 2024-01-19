@@ -21,9 +21,11 @@ from mmpose.apis import (
 ROOT_DIR = osp.abspath(f"{__file__}/../../../../")
 VIT_DIR = osp.join(ROOT_DIR, "third-party/ViTPose")
 
+VIS_THRESH = 0.3
 BBOX_CONF = 0.5
 TRACKING_THR = 0.1
 MINIMUM_FRMAES = 30
+MINIMUM_JOINTS = 6
 
 class DetectionModel(object):
     def __init__(self, device):
@@ -51,11 +53,29 @@ class DetectionModel(object):
             'keypoints': []
         }
         
-    def xyxy_to_cxcys(self, bbox):
+    def xyxy_to_cxcys(self, bbox, s_factor=1.05):
         cx, cy = bbox[[0, 2]].mean(), bbox[[1, 3]].mean()
-        scale = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 200
+        scale = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 200 * s_factor
         return np.array([[cx, cy, scale]])
         
+    def compute_bboxes_from_keypoints(self, s_factor=1.2):
+        X = self.tracking_results['keypoints'].copy()
+        mask = X[..., -1] > VIS_THRESH
+
+        bbox = np.zeros((len(X), 3))
+        for i, (kp, m) in enumerate(zip(X, mask)):
+            bb = [kp[m, 0].min(), kp[m, 1].min(),
+                  kp[m, 0].max(), kp[m, 1].max()]
+            cx, cy = [(bb[2]+bb[0])/2, (bb[3]+bb[1])/2]
+            bb_w = bb[2] - bb[0]
+            bb_h = bb[3] - bb[1]
+            s = np.stack((bb_w, bb_h)).max()
+            bb = np.array((cx, cy, s))
+            bbox[i] = bb
+        
+        bbox[:, 2] = bbox[:, 2] * s_factor / 200.0
+        self.tracking_results['bbox'] = bbox
+    
     def track(self, img, fps, length):
         
         # bbox detection
@@ -83,6 +103,9 @@ class DetectionModel(object):
             fps=fps)
         
         for pose_result in pose_results:
+            n_valid = (pose_result['keypoints'][:, -1] > VIS_THRESH).sum()
+            if n_valid < MINIMUM_JOINTS: continue
+            
             _id = pose_result['track_id']
             xyxy = pose_result['bbox']
             bbox = self.xyxy_to_cxcys(xyxy)
@@ -90,16 +113,15 @@ class DetectionModel(object):
             self.tracking_results['id'].append(_id)
             self.tracking_results['frame_id'].append(self.frame_id)
             self.tracking_results['bbox'].append(bbox)
-            self.tracking_results['keypoints'].append(pose_result['keypoints'][None])
+            self.tracking_results['keypoints'].append(pose_result['keypoints'])
         
         self.frame_id += 1
         self.pose_results_last = pose_results
         
     def process(self, fps):
-        for key in ['id', 'frame_id']:
+        for key in ['id', 'frame_id', 'keypoints']:
             self.tracking_results[key] = np.array(self.tracking_results[key])
-        for key in ['keypoints', 'bbox']:
-            self.tracking_results[key] = np.concatenate(self.tracking_results[key], axis=0)
+        self.compute_bboxes_from_keypoints()
             
         output = defaultdict(dict)
         ids = np.unique(self.tracking_results['id'])
