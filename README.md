@@ -44,10 +44,12 @@ You can skip SLAM if you only want to get camera-coordinate motion. You can run 
 python demo.py --video examples/IMG_9732.mov --visualize --estimate_local_only
 ```
 
+## Docker
+
+Please refer to [Docker](docs/DOCKER.md) for details.
+
 ## Dataset
 Please see [Dataset](docs/DATASET.md) for details.
-
-
 
 ## Evaluation
 ```
