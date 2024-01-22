@@ -18,5 +18,6 @@ docker pull yusun9/wham-vitpose-dpvo-cuda11.3-python3.9:latest
 
 2. Run the code with docker environment:
 ```bash
+cd /path/to/WHAM
 docker run -v .:/code/ --rm yusun9/wham-vitpose-dpvo-cuda11.3-python3.9 python demo.py --video examples/IMG_9732.mov
 ```

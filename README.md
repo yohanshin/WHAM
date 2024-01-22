@@ -48,6 +48,10 @@ python demo.py --video examples/IMG_9732.mov --visualize --estimate_local_only
 
 Please refer to [Docker](docs/DOCKER.md) for details.
 
+## Python API
+
+Please refer to [API](docs/API.md) for details.
+
 ## Dataset
 Please see [Dataset](docs/DATASET.md) for details.
 
