@@ -18,6 +18,7 @@ from progress.bar import Bar
 
 from configs.config import get_cfg_defaults
 from lib.data._custom import CustomDataset
+from lib.utils.transforms import matrix_to_axis_angle
 from lib.models import build_network, build_body_model
 from lib.models.preproc.detector import DetectionModel
 from lib.models.preproc.extractor import FeatureExtractor
@@ -35,6 +36,7 @@ def run(cfg,
         network,
         calib=None,
         run_global=True,
+        save_pkl=False,
         visualize=False):
     
     cap = cv2.VideoCapture(video)
@@ -109,15 +111,24 @@ def run(cfg,
         # inference
         pred = network(x, inits, features, mask=mask, init_root=init_root, cam_angvel=cam_angvel, return_y_up=True, **kwargs)
         
-        # Store results
-        results[_id]['poses_body'] = pred['poses_body'].cpu().squeeze(0).numpy()
-        results[_id]['poses_root_cam'] = pred['poses_root_cam'].cpu().squeeze(0).numpy()
-        results[_id]['betas'] = pred['betas'].cpu().squeeze(0).numpy()
-        results[_id]['verts_cam'] = (pred['verts_cam'] + pred['trans_cam'].unsqueeze(1)).cpu().numpy()
-        results[_id]['poses_root_world'] = pred['poses_root_world'].cpu().squeeze(0).numpy()
-        results[_id]['trans_world'] = pred['trans_world'].cpu().squeeze(0).numpy()
-        results[_id]['frame_id'] = frame_id
+        # ========= Store results ========= #
+        pred_body_pose = matrix_to_axis_angle(pred['poses_body']).cpu().numpy().reshape(-1, 69)
+        pred_root = matrix_to_axis_angle(pred['poses_root_cam']).cpu().numpy().reshape(-1, 3)
+        pred_root_world = matrix_to_axis_angle(pred['poses_root_world']).cpu().numpy().reshape(-1, 3)
+        pred_pose = np.concatenate((pred_root, pred_body_pose), axis=-1)
+        pred_pose_world = np.concatenate((pred_root_world, pred_body_pose), axis=-1)
         
+        results[_id]['pose'] = pred_pose
+        results[_id]['trans'] = pred['trans_cam'].cpu().numpy()
+        results[_id]['pose_world'] = pred_pose_world
+        results[_id]['trans_world'] = pred['trans_world'].cpu().squeeze(0).numpy()
+        results[_id]['betas'] = pred['betas'].cpu().squeeze(0).numpy()
+        results[_id]['verts'] = (pred['verts_cam'] + pred['trans_cam'].unsqueeze(1)).cpu().numpy()
+        results[_id]['frame_ids'] = frame_id
+    
+    if save_pkl:
+        joblib.dump(results, osp.join(output_pth, "wham_output.pkl"))
+     
     # Visualize
     if visualize:
         from lib.vis.run_vis import run_vis_on_demo
@@ -141,6 +152,9 @@ if __name__ == '__main__':
     
     parser.add_argument('--visualize', action='store_true',
                         help='Visualize the output mesh if True')
+    
+    parser.add_argument('--save_pkl', action='store_true',
+                        help='Save output as pkl file')
 
     args = parser.parse_args()
 
@@ -168,6 +182,7 @@ if __name__ == '__main__':
             network, 
             args.calib, 
             run_global=not args.estimate_local_only, 
+            save_pkl=args.save_pkl,
             visualize=args.visualize)
         
     print()

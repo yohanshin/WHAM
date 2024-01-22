@@ -56,10 +56,6 @@ class Network(nn.Module):
                                                     d_hidden=d_embed,
                                                     rnn_type=rnn_type,
                                                     n_layers=2)
-        
-    @property
-    def __version__(self, ):
-        return 'v07'
     
     def compute_global_feet(self, duplicate=False):
         # Global motion
