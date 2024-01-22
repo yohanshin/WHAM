@@ -25,7 +25,7 @@ def run_vis_on_demo(cfg, video, results, output_pth, smpl, vis_global=True):
     if vis_global:
         # setup global coordinate subject
         # current implementation only visualize the subject appeared longest
-        n_frames = {k: len(results[k]['frame_id']) for k in results.keys()}
+        n_frames = {k: len(results[k]['frame_ids']) for k in results.keys()}
         sid = max(n_frames, key=n_frames.get)
         global_output = smpl.get_output(
             body_pose=tt(results[sid]['poses_body']), 
@@ -66,15 +66,15 @@ def run_vis_on_demo(cfg, video, results, output_pth, smpl, vis_global=True):
         renderer.create_camera(default_R, default_T)
         for _id, val in results.items():
             # render onto the image
-            frame_i2 = np.where(val['frame_id'] == frame_i)[0]
+            frame_i2 = np.where(val['frame_ids'] == frame_i)[0]
             if len(frame_i2) == 0: continue
             frame_i2 = frame_i2[0]
             img = renderer.render_mesh(torch.from_numpy(val['verts_cam'][frame_i2]).to(cfg.DEVICE), img)
         
         if vis_global:
             # render the global coordinate
-            if frame_i in results[sid]['frame_id']:
-                frame_i3 = np.where(results[sid]['frame_id'] == frame_i)[0]
+            if frame_i in results[sid]['frame_ids']:
+                frame_i3 = np.where(results[sid]['frame_ids'] == frame_i)[0]
                 verts = verts_glob[[frame_i3]].to(cfg.DEVICE)
                 faces = renderer.faces.clone().squeeze(0)
                 colors = torch.ones((1, 4)).float().to(cfg.DEVICE); colors[..., :3] *= 0.9
