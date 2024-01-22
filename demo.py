@@ -117,9 +117,10 @@ def run(cfg,
         pred_root_world = matrix_to_axis_angle(pred['poses_root_world']).cpu().numpy().reshape(-1, 3)
         pred_pose = np.concatenate((pred_root, pred_body_pose), axis=-1)
         pred_pose_world = np.concatenate((pred_root_world, pred_body_pose), axis=-1)
+        pred_trans = (pred['trans_cam'] - network.output.offset).cpu().numpy()
         
         results[_id]['pose'] = pred_pose
-        results[_id]['trans'] = pred['trans_cam'].cpu().numpy()
+        results[_id]['trans'] = pred_trans
         results[_id]['pose_world'] = pred_pose_world
         results[_id]['trans_world'] = pred['trans_world'].cpu().squeeze(0).numpy()
         results[_id]['betas'] = pred['betas'].cpu().squeeze(0).numpy()
