@@ -29,7 +29,7 @@ def run_vis_on_demo(cfg, video, results, output_pth, smpl, vis_global=True):
         sid = max(n_frames, key=n_frames.get)
         global_output = smpl.get_output(
             body_pose=tt(results[sid]['pose_world'][:, 3:]), 
-            global_orient=tt(results[sid]['pose_world'][:, :3]).unsqueeze(1),
+            global_orient=tt(results[sid]['pose_world'][:, :3]),
             betas=tt(results[sid]['betas']),
             transl=tt(results[sid]['trans_world']))
         verts_glob = global_output.vertices.cpu()
