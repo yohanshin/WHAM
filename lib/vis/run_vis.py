@@ -68,7 +68,7 @@ def run_vis_on_demo(cfg, video, results, output_pth, smpl, vis_global=True):
             frame_i2 = np.where(val['frame_ids'] == frame_i)[0]
             if len(frame_i2) == 0: continue
             frame_i2 = frame_i2[0]
-            img = renderer.render_mesh(torch.from_numpy(val['verts_cam'][frame_i2]).to(cfg.DEVICE), img)
+            img = renderer.render_mesh(torch.from_numpy(val['verts'][frame_i2]).to(cfg.DEVICE), img)
         
         if vis_global:
             # render the global coordinate
