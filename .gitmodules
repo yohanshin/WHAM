@@ -4,3 +4,6 @@
 [submodule "third-party/ViTPose"]
 	path = third-party/ViTPose
 	url = https://github.com/ViTAE-Transformer/ViTPose.git
+[submodule "third-party/ViTDet"]
+	path = third-party/ViTDet
+	url = https://github.com/ViTAE-Transformer/ViTDet.git

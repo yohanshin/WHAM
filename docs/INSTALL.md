@@ -21,8 +21,9 @@ pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/whee
 # Install WHAM dependencies
 pip install -r requirements.txt
 
-# Install ViTPose
+# Install ViTPose and ViTDet
 pip install -v -e third-party/ViTPose
+pip install -v -e third-party/ViTDet
 
 # Install DPVO
 cd third-party/DPVO

@@ -17,5 +17,4 @@ xtcocotools>=1.8
 loguru
 setuptools==59.5.0
 tqdm
-ultralytics
 gdown==4.6.0
