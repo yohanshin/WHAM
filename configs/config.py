@@ -52,6 +52,20 @@ cfg.LOSS.CAM_LOSS_WEIGHT = 0.04
 cfg.LOSS.LOSS_WEIGHT = 60.
 cfg.LOSS.CAM_LOSS_EPOCH = 5
 
+cfg.MMPOSE_CFG = CN()
+cfg.MMPOSE_CFG.POSE_CONFIG=''
+cfg.MMPOSE_CFG.POSE_CHECKPOINT=''
+cfg.MMPOSE_CFG.DET_CONFIG=''
+cfg.MMPOSE_CFG.DET_CHECKPOINT=''
+cfg.MMPOSE_CFG.BBOX_CONF = 0.5
+cfg.MMPOSE_CFG.TRACKING_THR = 0.1
+cfg.MMPOSE_CFG.MINIMUM_FRMAES = 30
+
+cfg.DPVO = CN()
+cfg.DPVO.CFG = ''
+cfg.DPVO.CKPT = ''
+
+cfg.FEATURES_EXTR_CKPT = ''
 
 def get_cfg_defaults():
     """Get a yacs CfgNode object with default values for my_project."""

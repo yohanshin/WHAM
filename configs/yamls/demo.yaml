@@ -11,3 +11,18 @@ TRAIN:
 
 MODEL:
   BACKBONE: 'vit'
+
+MMPOSE_CFG:
+  POSE_CONFIG: 'configs/VIT/td-hm_ViTPose-small_8xb64-210e_coco-256x192.py'
+  POSE_CHECKPOINT: 'https://download.openmmlab.com/mmpose/v1/body_2d_keypoint/topdown_heatmap/coco/td-hm_ViTPose-small_8xb64-210e_coco-256x192-62d7a712_20230314.pth'
+  DET_CONFIG: ''
+  DET_CHECKPOINT: 'checkpoints/yolov8m.pt'
+  BBOX_CONF: 0.5
+  TRACKING_THR: 0.1
+  MINIMUM_FRMAES: 30
+
+DPVO:
+  CFG: 'configs/DPVO/default.yaml'
+  CKPT: 'checkpoints/dpvo.pth'
+
+FEATURES_EXTR_CKPT: 'checkpoints/hmr2a.ckpt'

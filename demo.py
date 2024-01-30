@@ -17,13 +17,13 @@ from loguru import logger
 from progress.bar import Bar
 
 from configs.config import get_cfg_defaults
-from lib.data._custom import CustomDataset
-from lib.models import build_network, build_body_model
-from lib.models.preproc.detector import DetectionModel
-from lib.models.preproc.extractor import FeatureExtractor
+from wham.data._custom import CustomDataset
+from wham.models import build_network, build_body_model
+from wham.models.preproc.detector import DetectionModel
+from wham.models.preproc.extractor import FeatureExtractor
 
 try: 
-    from lib.models.preproc.slam import SLAMModel
+    from wham.models.preproc.slam import SLAMModel
     _run_global = True
 except: 
     logger.info('DPVO is not properly installed. Only estimate in local coordinates !')
@@ -51,7 +51,7 @@ def run(cfg,
             osp.exists(osp.join(output_pth, 'slam_results.pth'))):
         
         detector = DetectionModel(cfg.DEVICE.lower())
-        extractor = FeatureExtractor(cfg.DEVICE.lower())
+        extractor = FeatureExtractor(cfg.FEATURES_EXTR_CKPT, cfg.DEVICE.lower())
         
         if run_global: slam = SLAMModel(video, output_pth, width, height, calib)
         else: slam = None
@@ -120,7 +120,7 @@ def run(cfg,
         
     # Visualize
     if visualize:
-        from lib.vis.run_vis import run_vis_on_demo
+        from wham.vis.run_vis import run_vis_on_demo
         run_vis_on_demo(cfg, video, results, output_pth, network.smpl, vis_global=run_global)
         
 if __name__ == '__main__':
