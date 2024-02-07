@@ -22,6 +22,7 @@ from lib.eval.eval_utils import (
 from lib.utils import transforms
 from lib.utils.utils import prepare_output_dir
 from lib.utils.utils import prepare_batch
+from lib.utils.imutils import avg_preds
 
 m2mm = 1e3
 smplx2smpl = torch.from_numpy(joblib.load(_C.BMODEL.SMPLX2SMPL)['matrix']).unsqueeze(0).float().cuda()
@@ -50,11 +51,34 @@ def main(cfg, args):
     accumulator = defaultdict(list)
     bar = Bar('Inference', fill='#', max=len(eval_loader))
     with torch.no_grad():
-        for i, batch in enumerate(eval_loader):
+        for i in range(len(eval_loader)):
+            # Original batch
+            batch = eval_loader.dataset.load_data(i, False)
             x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
             
             # <======= Inference
+            if cfg.FLIP_EVAL:
+                flipped_batch = eval_loader.dataset.load_data(i, True)
+                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, True)
+            
+                # Forward pass with flipped input
+                flipped_pred = network(f_x, f_inits, f_features, **f_kwargs)
+                
+            # Forward pass with normal input
             pred = network(x, inits, features, **kwargs)
+            
+            if cfg.FLIP_EVAL:
+                # Merge two predictions
+                flipped_pose, flipped_shape = flipped_pred['pose'].squeeze(0), flipped_pred['betas'].squeeze(0)
+                pose, shape = pred['pose'].squeeze(0), pred['betas'].squeeze(0)
+                flipped_pose, pose = flipped_pose.reshape(-1, 24, 6), pose.reshape(-1, 24, 6)
+                avg_pose, avg_shape = avg_preds(pose, shape, flipped_pose, flipped_shape)
+                avg_pose = avg_pose.reshape(-1, 144)
+                
+                # Refine trajectory with merged prediction
+                network.pred_pose = avg_pose.view_as(network.pred_pose)
+                network.pred_shape = avg_shape.view_as(network.pred_shape)
+                pred = network.forward_smpl(**kwargs)
             # =======>
             
             # <======= Build predicted SMPL
@@ -68,7 +92,7 @@ def main(cfg, args):
             
             # <======= Build groundtruth SMPL (from SMPLX)
             smplx = SMPLX(_C.BMODEL.FLDR.replace('smpl', 'smplx'), 
-                          gender=batch['gender'][0], 
+                          gender=batch['gender'], 
                           batch_size=len(pred_verts)
             ).to(cfg.DEVICE)
             gt_pose = transforms.matrix_to_axis_angle(transforms.rotation_6d_to_matrix(gt['pose'][0]))
@@ -92,7 +116,7 @@ def main(cfg, args):
             accel = accel * (30 ** 2)       # per frame^s to per s^2
             # =======>
             
-            summary_string = f'{batch["vid"][0]} | PA-MPJPE: {pa_mpjpe.mean():.1f}   MPJPE: {mpjpe.mean():.1f}   PVE: {pve.mean():.1f}'
+            summary_string = f'{batch["vid"]} | PA-MPJPE: {pa_mpjpe.mean():.1f}   MPJPE: {mpjpe.mean():.1f}   PVE: {pve.mean():.1f}'
             bar.suffix = summary_string
             bar.next()
             
