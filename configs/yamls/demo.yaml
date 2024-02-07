@@ -4,6 +4,7 @@ EXP_NAME: 'demo'
 OUTPUT_DIR: 'experiments/'
 NUM_WORKERS: 0
 MODEL_CONFIG: 'configs/yamls/model_base.yaml'
+FLIP_EVAL: True
 
 TRAIN:
   STAGE: 'stage2'

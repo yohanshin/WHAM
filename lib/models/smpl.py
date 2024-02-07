@@ -46,7 +46,8 @@ class SMPL(_SMPL):
                 cam_intrinsics=None, 
                 bbox=None, 
                 res=None,
-                return_full_pose=False):
+                return_full_pose=False,
+                **kwargs):
         
         rotmat = transforms.rotation_6d_to_matrix(pred_rot6d.reshape(*pred_rot6d.shape[:2], -1, 6)
         ).reshape(-1, 24, 3, 3)

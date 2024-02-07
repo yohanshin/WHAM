@@ -60,28 +60,37 @@ class CustomDataset(torch.utils.data.Dataset):
         
     def __len__(self):
         return len(self.tracking_results.keys())
+
+    def load_data(self, index, flip=False):
+        if flip:
+            self.prefix = 'flipped_'
+        else:
+            self.prefix = ''
+        
+        return self.__getitem__(index)
     
     def __getitem__(self, _index):
         if _index >= len(self): return
+        
         index = sorted(list(self.tracking_results.keys()))[_index]
             
         # Process 2D keypoints
-        kp2d = torch.from_numpy(self.tracking_results[index]['keypoints']).float()
+        kp2d = torch.from_numpy(self.tracking_results[index][self.prefix + 'keypoints']).float()
         mask = kp2d[..., -1] < KEYPOINTS_THR
-        bbox = torch.from_numpy(self.tracking_results[index]['bbox']).float()
+        bbox = torch.from_numpy(self.tracking_results[index][self.prefix + 'bbox']).float()
         
         norm_kp2d, _ = self.keypoints_normalizer(
             kp2d[..., :-1].clone(), self.res, self.intrinsics, 224, 224, bbox
         )
         
         # Process image features
-        features = torch.cat(self.tracking_results[index]['features'])
+        features = self.tracking_results[index][self.prefix + 'features']
         
         # Process initial pose
         init_output = self.smpl.get_output(
-            global_orient=self.tracking_results[index]['init_global_orient'],
-            body_pose=self.tracking_results[index]['init_body_pose'],
-            betas=self.tracking_results[index]['init_betas'],
+            global_orient=self.tracking_results[index][self.prefix + 'init_global_orient'],
+            body_pose=self.tracking_results[index][self.prefix + 'init_body_pose'],
+            betas=self.tracking_results[index][self.prefix + 'init_betas'],
             pose2rot=False,
             return_full_pose=True
         )

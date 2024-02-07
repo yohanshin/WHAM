@@ -2,6 +2,7 @@ import cv2
 import torch
 import random
 import numpy as np
+from . import transforms
 
 def do_augmentation(scale_factor=0.2, trans_factor=0.1):
     scale = random.uniform(1.2 - scale_factor, 1.2 + scale_factor)
@@ -271,3 +272,92 @@ def compute_cam_intrinsics(res):
     cam_intrinsics[:, 0, 2] = img_w/2.
     cam_intrinsics[:, 1, 2] = img_h/2.
     return cam_intrinsics
+
+
+def flip_kp(kp, img_w=None):
+    """Flip keypoints."""
+    
+    flipped_parts = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
+    kp = kp[..., flipped_parts, :]
+    
+    if img_w is not None:
+        # Assume 2D keypoints
+        kp[...,0] = img_w - kp[...,0]
+    return kp
+
+
+def flip_bbox(bbox, img_w, img_h):
+    center = bbox[..., :2]
+    scale = bbox[..., -1:]
+    
+    WH = np.ones_like(center)
+    WH[..., 0] *= img_w
+    WH[..., 1] *= img_h
+    
+    center = center - WH/2
+    center[...,0] = - center[...,0]
+    center = center + WH/2
+    
+    flipped_bbox = np.concatenate((center, scale), axis=-1)
+    return flipped_bbox
+
+
+def flip_pose(rotation, representation='rotation_6d'):
+    """Flip pose.
+    The flipping is based on SMPL parameters.
+    """
+    
+    BN = rotation.shape[0]
+    
+    if representation == 'axis_angle':
+        pose = rotation.reshape(BN, -1).transpose(0, 1)
+    elif representation == 'matrix':
+        pose = transforms.matrix_to_axis_angle(rotation).reshape(BN, -1).transpose(0, 1)
+    elif representation == 'rotation_6d':
+        pose = transforms.matrix_to_axis_angle(
+            transforms.rotation_6d_to_matrix(rotation)
+        ).reshape(BN, -1).transpose(0, 1)
+    else:
+        raise ValueError(f"Unknown representation: {representation}")
+    
+    SMPL_JOINTS_FLIP_PERM = [0, 2, 1, 3, 5, 4, 6, 8, 7, 9, 11, 10, 12, 14, 13, 15, 17, 16, 19, 18, 21, 20, 23, 22]
+    SMPL_POSE_FLIP_PERM = []
+    for i in SMPL_JOINTS_FLIP_PERM:
+        SMPL_POSE_FLIP_PERM.append(3*i)
+        SMPL_POSE_FLIP_PERM.append(3*i+1)
+        SMPL_POSE_FLIP_PERM.append(3*i+2)
+    
+    pose = pose[SMPL_POSE_FLIP_PERM]
+    
+    # we also negate the second and the third dimension of the axis-angle
+    pose[1::3] = -pose[1::3]
+    pose[2::3] = -pose[2::3]
+    pose = pose.transpose(0, 1).reshape(BN, -1, 3)
+    
+    if representation == 'aa':
+        return pose
+    elif representation == 'rotmat':
+        return transforms.axis_angle_to_matrix(pose)
+    else:
+        return transforms.matrix_to_rotation_6d(
+            transforms.axis_angle_to_matrix(pose)
+        )
+        
+def avg_preds(rotation, shape, flipped_rotation, flipped_shape, representation='rotation_6d'):
+    # Rotation
+    flipped_rotation = flip_pose(flipped_rotation, representation=representation)
+    
+    if representation != 'matrix':
+        flipped_rotation = eval(f'transforms.{representation}_to_matrix')(flipped_rotation)
+        rotation = eval(f'transforms.{representation}_to_matrix')(rotation)
+    
+    avg_rotation = torch.stack([rotation, flipped_rotation])
+    avg_rotation = transforms.avg_rot(avg_rotation)
+    
+    if representation != 'matrix':
+        avg_rotation = eval(f'transforms.matrix_to_{representation}')(avg_rotation)
+    
+    # Shape
+    avg_shape = (shape + flipped_shape) / 2.0
+    
+    return avg_rotation, avg_shape
