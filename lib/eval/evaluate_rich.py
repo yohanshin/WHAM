@@ -51,10 +51,10 @@ def main(cfg, args):
     bar = Bar('Inference', fill='#', max=len(eval_loader))
     with torch.no_grad():
         for i, batch in enumerate(eval_loader):
-            x, inits, features, gt = prepare_batch(batch, cfg.DEVICE, True)
+            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
             
             # <======= Inference
-            pred = network(x, inits, features, **gt)
+            pred = network(x, inits, features, **kwargs)
             # =======>
             
             # <======= Build predicted SMPL

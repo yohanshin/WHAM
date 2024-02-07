@@ -27,14 +27,10 @@ from lib.utils import transforms
 from lib.utils.utils import prepare_output_dir
 from lib.utils.utils import prepare_batch
 from lib.utils.imutils import avg_preds
+from lib.models.smplify import TemporalSMPLify
 
-"""
-This is a tentative script to evaluate WHAM on EMDB dataset.
-Current implementation requires EMDB dataset downloaded at ./datasets/EMDB/
-"""
 
 m2mm = 1e3
-@torch.no_grad()
 def main(cfg, args):
     logger.info(f'GPU name -> {torch.cuda.get_device_name()}')
     logger.info(f'GPU feat -> {torch.cuda.get_device_properties("cuda")}')    
@@ -45,10 +41,10 @@ def main(cfg, args):
     
     # ========= Load WHAM ========= #
     smpl_batch_size = cfg.TRAIN.BATCH_SIZE * cfg.DATASET.SEQLEN
-    smpl = build_body_model(cfg.DEVICE, smpl_batch_size)
-    network = build_network(cfg, smpl)
+    smpl_model = build_body_model(cfg.DEVICE, smpl_batch_size)
+    network = build_network(cfg, smpl_model)
     network.eval()
-    
+
     # Build SMPL models with each gender
     smpl = {k: SMPL(_C.BMODEL.FLDR, gender=k).to(cfg.DEVICE) for k in ['male', 'female', 'neutral']}
     
@@ -62,30 +58,49 @@ def main(cfg, args):
     tt = lambda x: torch.from_numpy(x).float().to(cfg.DEVICE)
     accumulator = defaultdict(list)
     bar = Bar('Inference', fill='#', max=len(eval_loader))
-    with torch.no_grad():
-        for i in range(len(eval_loader)):
-            # Original batch
-            batch = eval_loader.dataset.load_data(i, False)
-            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
-            
-            # Align with groundtruth data to the first frame
-            cam2yup = batch['R'][0][:1].to(cfg.DEVICE)
-            cam2ydown = cam2yup @ yup2ydown
-            cam2root = transforms.rotation_6d_to_matrix(inits[1][:, 0, 0])
-            ydown2root = cam2ydown.mT @ cam2root
-            ydown2root = transforms.matrix_to_rotation_6d(ydown2root)
-            kwargs['init_root'][:, 0] = ydown2root
-            
+
+    for i in range(len(eval_loader)):
+        # Original batch
+        batch = eval_loader.dataset.load_data(i, False)
+        x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
+        
+        # <======= Prepare groundtruth data
+        subj, seq = batch['vid'][:2], batch['vid'][3:]
+        annot_pth = glob(osp.join(_C.PATHS.EMDB_PTH, subj, seq, '*_data.pkl'))[0]
+        annot = pickle.load(open(annot_pth, 'rb'))
+        
+        masks = annot['good_frames_mask']
+        gender = annot['gender']
+        poses_body = annot["smpl"]["poses_body"]
+        poses_root = annot["smpl"]["poses_root"]
+        betas = np.repeat(annot["smpl"]["betas"].reshape((1, -1)), repeats=annot["n_frames"], axis=0)
+        trans = annot["smpl"]["trans"]
+        extrinsics = annot["camera"]["extrinsics"]
+        
+        # # Map to camear coordinate
+        poses_root_cam = transforms.matrix_to_axis_angle(tt(extrinsics[:, :3, :3]) @ transforms.axis_angle_to_matrix(tt(poses_root)))
+        
+        # Groundtruth global motion
+        target_glob = smpl[gender](body_pose=tt(poses_body), global_orient=tt(poses_root), betas=tt(betas), transl=tt(trans))
+        target_j3d_glob = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_glob.vertices)[masks]
+        
+        # Groundtruth local motion
+        target_cam = smpl[gender](body_pose=tt(poses_body), global_orient=poses_root_cam, betas=tt(betas))
+        target_verts_cam = target_cam.vertices[masks]
+        target_j3d_cam = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_verts_cam)
+        # =======>
+        
+        with torch.no_grad():
             if cfg.FLIP_EVAL:
                 flipped_batch = eval_loader.dataset.load_data(i, True)
                 f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, True)
             
                 # Forward pass with flipped input
                 flipped_pred = network(f_x, f_inits, f_features, **f_kwargs)
-                
+            
             # Forward pass with normal input
             pred = network(x, inits, features, **kwargs)
-            
+        
             if cfg.FLIP_EVAL:
                 # Merge two predictions
                 flipped_pose, flipped_shape = flipped_pred['pose'].squeeze(0), flipped_pred['betas'].squeeze(0)
@@ -102,32 +117,22 @@ def main(cfg, args):
                 output = network.forward_smpl(**kwargs)
                 pred = network.refine_trajectory(output, return_y_up=True, **kwargs)
             
-            # <======= Prepare groundtruth data
-            subj, seq = batch['vid'][:2], batch['vid'][3:]
-            annot_pth = glob(osp.join(_C.PATHS.EMDB_PTH, subj, seq, '*_data.pkl'))[0]
-            annot = pickle.load(open(annot_pth, 'rb'))
+        # if cfg.FIT_SMPLIFY:
+        if False:
+            img_w, img_h = kwargs['res'][0].cpu().numpy()
+            smplify = TemporalSMPLify(smpl_model, img_w=img_w, img_h=img_h, device=cfg.DEVICE)
+            input_keypoints = batch['input_kp2d'][0].cpu().numpy()
+            pred = smplify.fit(pred, input_keypoints, **kwargs)
             
-            masks = annot['good_frames_mask']
-            gender = annot['gender']
-            poses_body = annot["smpl"]["poses_body"]
-            poses_root = annot["smpl"]["poses_root"]
-            betas = np.repeat(annot["smpl"]["betas"].reshape((1, -1)), repeats=annot["n_frames"], axis=0)
-            trans = annot["smpl"]["trans"]
-            extrinsics = annot["camera"]["extrinsics"]
-            
-            # # Map to camear coordinate
-            poses_root_cam = transforms.matrix_to_axis_angle(tt(extrinsics[:, :3, :3]) @ transforms.axis_angle_to_matrix(tt(poses_root)))
-            
-            # Groundtruth global motion
-            target_glob = smpl[gender](body_pose=tt(poses_body), global_orient=tt(poses_root), betas=tt(betas), transl=tt(trans))
-            target_j3d_glob = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_glob.vertices)[masks]
-            
-            # Groundtruth local motion
-            target_cam = smpl[gender](body_pose=tt(poses_body), global_orient=poses_root_cam, betas=tt(betas))
-            target_verts_cam = target_cam.vertices[masks]
-            target_j3d_cam = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_verts_cam)
-            # =======>
-            
+            with torch.no_grad():
+                network.pred_pose = pred['pose']
+                network.pred_shape = pred['betas']
+                network.pred_cam = pred['cam']
+                output = network.forward_smpl(**kwargs)
+                pred = network.refine_trajectory(output, batch['cam_angvel'], return_y_up=True)
+                
+        with torch.no_grad(): 
+            import pdb; pdb.set_trace()
             # Convert WHAM global orient to Y-up coordinate
             poses_root = pred['poses_root_world'].squeeze(0)
             trans = pred['trans_world'].squeeze(0)
@@ -156,7 +161,7 @@ def main(cfg, args):
             accel = compute_error_accel(joints_pred=pred_j3d_cam.cpu(), joints_gt=target_j3d_cam.cpu())[1:-1]
             accel = accel * (30 ** 2)       # per frame^s to per s^2
             
-            summary_string = f'{batch["vid"]} | PA-MPJPE: {pa_mpjpe.mean():.1f}   MPJPE: {mpjpe.mean():.1f}   PVE: {pve.mean():.1f}'
+            summary_string = f'{batch["vid"][0]} | PA-MPJPE: {pa_mpjpe.mean():.1f}   MPJPE: {mpjpe.mean():.1f}   PVE: {pve.mean():.1f}'
             bar.suffix = summary_string
             bar.next()
             # =======>
@@ -164,9 +169,10 @@ def main(cfg, args):
             # <======= Evaluation on the global motion
             chunk_length = 100
             w_mpjpe, wa_mpjpe = [], []
-            for start in range(0, masks.sum(), chunk_length):
-                end = min(masks.sum(), start + chunk_length)
-
+            for start in range(0, masks.sum() - chunk_length, chunk_length):
+                end = start + chunk_length
+                if start + 2 * chunk_length > masks.sum(): end = masks.sum() - 1
+                
                 target_j3d = target_j3d_glob[start:end].clone().cpu()
                 pred_j3d = pred_j3d_glob[start:end].clone().cpu()
                 
@@ -198,8 +204,9 @@ def main(cfg, args):
     log_str = f'Evaluation on EMDB {args.eval_split}, '
     log_str += ' '.join([f'{k.upper()}: {v:.4f},'for k,v in accumulator.items()])
     logger.info(log_str)
-            
-            
+
+
+
 if __name__ == '__main__':
     cfg, cfg_file, args = parse_args(test=True)
     cfg = prepare_output_dir(cfg, cfg_file)

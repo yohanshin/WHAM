@@ -44,6 +44,8 @@ You can skip SLAM if you only want to get camera-coordinate motion. You can run 
 python demo.py --video examples/IMG_9732.mov --visualize --estimate_local_only
 ```
 
+You can further refine the results of WHAM using Temporal SMPLify as a post processing. This will allow better 2D alignment as well as 3D accuracy. All you need to do is add `--run_smplify` flag when running demo.
+
 ## Docker
 
 Please refer to [Docker](docs/DOCKER.md) for details.
