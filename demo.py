@@ -139,7 +139,7 @@ def run(cfg,
                 pred = network(x, inits, features, mask=mask, init_root=init_root, cam_angvel=cam_angvel, return_y_up=True, **kwargs)
         
         # if False:
-        if cfg.FIT_SMPLIFY:
+        if args.run_smplify:
             smplify = TemporalSMPLify(smpl, img_w=width, img_h=height, device=cfg.DEVICE)
             input_keypoints = dataset.tracking_results[_id]['keypoints']
             pred = smplify.fit(pred, input_keypoints, **kwargs)
@@ -197,6 +197,9 @@ if __name__ == '__main__':
     
     parser.add_argument('--save_pkl', action='store_true',
                         help='Save output as pkl file')
+    
+    parser.add_argument('--run_smplify', action='store_true',
+                        help='Run Temporal SMPLify for post processing')
 
     args = parser.parse_args()
 
