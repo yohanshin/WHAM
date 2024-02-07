@@ -72,7 +72,6 @@ class SMPLTransformerDecoderHead(nn.Module):
 
         batch_size = x.shape[0]
         # vit pretrained backbone is channel-first. Change to token-first
-        x = einops.rearrange(x, 'b c h w -> b (h w) c')
 
         init_body_pose = self.init_body_pose.expand(batch_size, -1)
         init_betas = self.init_betas.expand(batch_size, -1)
@@ -88,8 +87,10 @@ class SMPLTransformerDecoderHead(nn.Module):
         pred_body_pose_list = []
         pred_betas_list = []
         pred_cam_list = []
-        for i in range(1):
-            # Input token to transformer is zero token
+        
+        # Input token to transformer is zero token
+        if len(x.shape) > 2:
+            x = einops.rearrange(x, 'b c h w -> b (h w) c')
             if self.input_is_mean_shape:
                 token = torch.cat([pred_body_pose, pred_betas, pred_cam], dim=1)[:,None,:]
             else:
@@ -98,14 +99,16 @@ class SMPLTransformerDecoderHead(nn.Module):
             # Pass through transformer
             token_out = self.transformer(token, context=x)
             token_out = token_out.squeeze(1) # (B, C)
+        else:
+            token_out = x
 
-            # Readout from token_out
-            pred_body_pose = self.decpose(token_out) + pred_body_pose
-            pred_betas = self.decshape(token_out) + pred_betas
-            pred_cam = self.deccam(token_out) + pred_cam
-            pred_body_pose_list.append(pred_body_pose)
-            pred_betas_list.append(pred_betas)
-            pred_cam_list.append(pred_cam)
+        # Readout from token_out
+        pred_body_pose = self.decpose(token_out) + pred_body_pose
+        pred_betas = self.decshape(token_out) + pred_betas
+        pred_cam = self.deccam(token_out) + pred_cam
+        pred_body_pose_list.append(pred_body_pose)
+        pred_betas_list.append(pred_betas)
+        pred_cam_list.append(pred_cam)
 
         # Convert self.joint_rep_type -> rotmat
         joint_conversion_fn = {

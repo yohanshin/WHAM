@@ -27,6 +27,17 @@ class HMR2(nn.Module):
         self.smpl_head = SMPLTransformerDecoderHead()
 
 
+    def decode(self, x):
+        
+        batch_size = x.shape[0]
+        pred_smpl_params, pred_cam, _ = self.smpl_head(x)
+
+        # Compute model vertices, joints and the projected joints
+        pred_smpl_params['global_orient'] = pred_smpl_params['global_orient'].reshape(batch_size, -1, 3, 3)
+        pred_smpl_params['body_pose'] = pred_smpl_params['body_pose'].reshape(batch_size, -1, 3, 3)
+        pred_smpl_params['betas'] = pred_smpl_params['betas'].reshape(batch_size, -1)
+        return pred_smpl_params['global_orient'], pred_smpl_params['body_pose'], pred_smpl_params['betas'], pred_cam
+
     def forward(self, x, encode=False, **kwargs):
         """
         Run a forward step of the network

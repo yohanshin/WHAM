@@ -818,3 +818,11 @@ def quaternion_to_angle_axis(quaternion: torch.Tensor) -> torch.Tensor:
     angle_axis[..., 1] += q2 * k
     angle_axis[..., 2] += q3 * k
     return angle_axis
+
+
+def avg_rot(rot):
+    # input [B,...,3,3] --> output [...,3,3]
+    rot = rot.mean(dim=0)
+    U, _, V = torch.svd(rot)
+    rot = U @ V.transpose(-1, -2)
+    return rot

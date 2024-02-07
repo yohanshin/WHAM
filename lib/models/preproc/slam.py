@@ -44,7 +44,6 @@ class SLAMModel(object):
             line = f'{focal_length} {focal_length} {center_x} {center_y}'
             fopen.write(line)
             
-            
     def track(self, ):
         (t, image, intrinsics) = self.queue.get()
         
@@ -62,7 +61,6 @@ class SLAMModel(object):
             t = time.time()
             self.slam(t, image, intrinsics)
             self.times.append(time.time() - t)
-            
             
     def process(self, ):
         for _ in range(12):

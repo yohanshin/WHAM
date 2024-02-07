@@ -16,6 +16,8 @@ cfg.NUM_WORKERS = 5
 cfg.SEED_VALUE = -1
 cfg.SUMMARY_ITER = 1
 cfg.MODEL_CONFIG = ''
+cfg.FLIP_EVAL = False
+cfg.FIT_SMPLIFY = False
 
 cfg.TRAIN = CN()
 cfg.TRAIN.STAGE = 'stage1'

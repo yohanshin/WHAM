@@ -80,7 +80,8 @@ class DetectionModel(object):
         
         # bbox detection
         bboxes = self.bbox_model.predict(
-            img, device=self.device, classes=0, conf=BBOX_CONF, save=False, verbose=False)[0].boxes.xyxy.detach().cpu().numpy()
+            img, device=self.device, classes=0, conf=BBOX_CONF, save=False, verbose=False
+        )[0].boxes.xyxy.detach().cpu().numpy()
         bboxes = [{'bbox': bbox} for bbox in bboxes]
         
         # keypoints detection
@@ -117,16 +118,15 @@ class DetectionModel(object):
         
         self.frame_id += 1
         self.pose_results_last = pose_results
-        
+    
     def process(self, fps):
         for key in ['id', 'frame_id', 'keypoints']:
             self.tracking_results[key] = np.array(self.tracking_results[key])
         self.compute_bboxes_from_keypoints()
             
-        output = defaultdict(dict)
+        output = defaultdict(lambda: defaultdict(list))
         ids = np.unique(self.tracking_results['id'])
         for _id in ids:
-            output[_id]['features'] = []
             idxs = np.where(self.tracking_results['id'] == _id)[0]
             for key, val in self.tracking_results.items():
                 if key == 'id': continue

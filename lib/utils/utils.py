@@ -215,7 +215,7 @@ def prepare_output_dir(cfg, cfg_file):
 
 def prepare_groundtruth(batch, device):
     groundtruths = dict()
-    gt_keys = ['pose', 'cam', 'betas', 'kp3d', 'mask', 'bbox', 'res', 'cam_intrinsics', 'init_root', 'cam_angvel']
+    gt_keys = ['pose', 'cam', 'betas', 'kp3d']
     for gt_key in gt_keys:
         if gt_key in batch.keys():
             dtype = torch.float32 if batch[gt_key].dtype == torch.float64 else batch[gt_key].dtype
@@ -223,6 +223,15 @@ def prepare_groundtruth(batch, device):
     
     return groundtruths
 
+def prepare_auxiliary(batch, device):
+    aux = dict()
+    aux_keys = ['mask', 'bbox', 'res', 'cam_intrinsics', 'init_root', 'cam_angvel']
+    for key in aux_keys:
+        if key in batch.keys():
+            dtype = torch.float32 if batch[key].dtype == torch.float64 else batch[key].dtype
+            aux[key] = batch[key].to(dtype=dtype, device=device)
+    
+    return aux
 
 def prepare_input(batch, device, use_features):
     # Input keypoints data
@@ -247,6 +256,7 @@ def prepare_input(batch, device, use_features):
 
 def prepare_batch(batch, device, use_features=True):
     x, inits, features = prepare_input(batch, device, use_features)
+    aux = prepare_auxiliary(batch, device)
     groundtruths = prepare_groundtruth(batch, device)
     
-    return x, inits, features, groundtruths
+    return x, inits, features, aux, groundtruths
