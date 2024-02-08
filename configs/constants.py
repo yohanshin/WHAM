@@ -12,10 +12,15 @@ IMG_FEAT_DIM = {
 N_JOINTS = 17
 root = 'dataset'
 class PATHS:
+    # Raw data folders
     PARSED_DATA = f'{root}/parsed_data'
+    AMASS_PTH = f'{root}/AMASS'
     THREEDPW_PTH = f'{root}/3DPW'
     RICH_PTH = f'{root}/RICH'
     EMDB_PTH = f'{root}/EMDB'
+    
+    # Processed labels
+    AMASS_LABEL = f'{root}/processed_data/amass.pth'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS
