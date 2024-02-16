@@ -1,6 +1,8 @@
-import os, sys
-import yaml
+import os
+import sys
+
 import torch
+import yacs.config
 from loguru import logger
 
 from .. import constants as _C
@@ -20,9 +22,9 @@ def build_body_model(device, batch_size=1, gender='neutral', **kwargs):
 
 
 def build_network(cfg, smpl):
-    
+    s = yacs.config.CfgNode()
     with open(cfg.MODEL_CONFIG, 'r') as f:
-        model_config = yaml.safe_load(f)
+        model_config = dict(s.load_cfg(f))
     model_config.update({'d_feat': _C.IMG_FEAT_DIM[cfg.MODEL.BACKBONE]})
     model_config.update({'main_joints': _C.BMODEL.MAIN_JOINTS})
     model_config.update({'num_joints': _C.KEYPOINTS.NUM_JOINTS})

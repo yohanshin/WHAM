@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
+import os
 import torch
 
 IMG_FEAT_DIM = {
@@ -10,7 +11,7 @@ IMG_FEAT_DIM = {
 }
 
 N_JOINTS = 17
-root = 'dataset'
+root = os.path.join(os.getenv('WHAM_ROOT', '.'), 'dataset')
 class PATHS:
     PARSED_DATA = f'{root}/parsed_data'
     THREEDPW_PTH = f'{root}/3DPW'

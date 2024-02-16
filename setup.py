@@ -3,9 +3,9 @@ from setuptools import find_packages, setup
 
 if __name__ == '__main__':
     setup(
-        name='WHAM',
+        name='wham',
         version='0.1.0',
-        description='OpenMMLab Pose Estimation Toolbox and Benchmark.',
+        description='',
         author='',
         author_email='',
         keywords='computer vision',

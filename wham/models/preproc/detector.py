@@ -49,6 +49,8 @@ class DetectionModel(object):
         self.bbox_model = YOLO(bbox_model_ckpt)
         
         self.device = device
+        self.track_thr = self.mmpose_cfg.TRACKING_THR
+        self.min_frames = self.mmpose_cfg.MINIMUM_FRMAES
         self.initialize_tracking()
         
     def initialize_tracking(self, ):
@@ -67,7 +69,7 @@ class DetectionModel(object):
         scale = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 200
         return np.array([[cx, cy, scale]])
         
-    def track(self, img, fps, length):
+    def detect(self, img):
         
         # bbox detection, output list of np.array(float32)
         bboxes = self.bbox_model.predict(
@@ -79,11 +81,14 @@ class DetectionModel(object):
             img,
             bboxes=bboxes,
             bbox_format='xyxy')
+        return bboxes, pose_results
+    
+    def track_detections(self, pose_results):
         pose_results, self.next_id = get_track_id(
             pose_results,
             self.pose_results_last,
             self.next_id,
-            tracking_thr=self.mmpose_cfg.TRACKING_THR)
+            tracking_thr=self.track_thr)
         for pose_result in pose_results:
             _id = pose_result.track_id
             xyxy = pose_result.pred_instances.bboxes[0]
@@ -99,6 +104,10 @@ class DetectionModel(object):
         
         self.frame_id += 1
         self.pose_results_last = pose_results
+
+    def track(self, img, fps, length):
+        bboxes, pose_results = self.detect(img)
+        self.track_detections(pose_results)
         
     def process(self, fps):
         for key in ['id', 'frame_id']:
@@ -118,7 +127,7 @@ class DetectionModel(object):
         # Smooth bounding box detection
         ids = list(output.keys())
         for _id in ids:
-            if len(output[_id]['bbox']) < self.mmpose_cfg.MINIMUM_FRMAES:
+            if len(output[_id]['bbox']) < self.min_frames:
                 del output[_id]
                 continue
             
@@ -127,3 +136,10 @@ class DetectionModel(object):
             output[_id]['bbox'] = smoothed_bbox
         
         return output
+    
+
+class TrackingModel(DetectionModel):
+    def __init__(self, track_thr=.3, min_frames=10):
+        self.track_thr = track_thr
+        self.min_frames = min_frames
+        self.initialize_tracking()

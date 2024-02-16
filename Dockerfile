@@ -25,9 +25,9 @@ RUN pip install mmdet==3.1.0 mmpose==1.3.0 mmengine==0.8.3 mmpretrain==1.2.0
 RUN pip install https://data.pyg.org/whl/torch-2.0.0%2Bcu117/torch_scatter-2.1.2%2Bpt20cu117-cp310-cp310-linux_x86_64.whl
 RUN git clone https://github.com/princeton-vl/DPVO.git && cd DPVO && git checkout 5833835 && wget https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip && unzip eigen-3.4.0.zip -d thirdparty && rm -rf eigen-3.4.0.zip && pip install -e .
 
-
 COPY ./ /WHAM/
 WORKDIR /WHAM/
-
 RUN pip install -e . && pip install -r requirements.txt
+ENV WHAM_ROOT='/WHAM/'
+
 RUN bash ./fetch_demo_data.sh

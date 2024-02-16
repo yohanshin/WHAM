@@ -16,8 +16,7 @@ from dpvo.stream import video_stream
 
 class SLAMModel(object):
     def __init__(self, cfg, video, output_pth, width, height, calib=None, stride=1, skip=0, buffer=2048):
-        
-        if calib == None or not osp.exists(calib): 
+        if (calib is None) or not osp.exists(calib): 
             calib = osp.join(output_pth, 'calib.txt')
         if not osp.exists(calib):
             self.estimate_intrinsics(width, height, calib)
