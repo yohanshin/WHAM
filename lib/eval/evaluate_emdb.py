@@ -16,12 +16,15 @@ from configs.config import parse_args
 from lib.data.dataloader import setup_eval_dataloader
 from lib.models import build_network, build_body_model
 from lib.eval.eval_utils import (
-    compute_error_accel,
-    batch_align_by_pelvis,
-    batch_compute_similarity_transform_torch,
     compute_jpe,
+    compute_rte,
+    compute_jitter,
+    compute_error_accel,
+    compute_foot_sliding,
+    batch_align_by_pelvis,
     first_align_joints,
-    global_align_joints
+    global_align_joints,
+    batch_compute_similarity_transform_torch,
 )
 from lib.utils import transforms
 from lib.utils.utils import prepare_output_dir
@@ -130,13 +133,13 @@ def main(cfg, args):
             
             # Convert WHAM global orient to Y-up coordinate
             poses_root = pred['poses_root_world'].squeeze(0)
-            trans = pred['trans_world'].squeeze(0)
+            pred_trans = pred['trans_world'].squeeze(0)
             poses_root = yup2ydown.mT @ poses_root
-            trans = (yup2ydown.mT @ trans.unsqueeze(-1)).squeeze(-1)
+            pred_trans = (yup2ydown.mT @ pred_trans.unsqueeze(-1)).squeeze(-1)
             
             # <======= Build predicted motion
             # Predicted global motion
-            pred_glob = smpl['neutral'](body_pose=pred['poses_body'], global_orient=poses_root.unsqueeze(1), betas=pred['betas'].squeeze(0), transl=trans, pose2rot=False)
+            pred_glob = smpl['neutral'](body_pose=pred['poses_body'], global_orient=poses_root.unsqueeze(1), betas=pred['betas'].squeeze(0), transl=pred_trans, pose2rot=False)
             pred_j3d_glob = torch.matmul(smpl['neutral'].J_regressor.unsqueeze(0), pred_glob.vertices)
             
             # Predicted local motion
@@ -180,6 +183,11 @@ def main(cfg, args):
             
             w_mpjpe = np.concatenate(w_mpjpe) * m2mm
             wa_mpjpe = np.concatenate(wa_mpjpe) * m2mm
+            
+            # Additional metrics
+            rte = compute_rte(torch.from_numpy(trans[masks]), pred_trans.cpu()) * 1e2
+            jitter = compute_jitter(pred_glob, fps=30)
+            foot_sliding = compute_foot_sliding(target_glob, pred_glob, masks) * m2mm
             # =======>
             
             # <======= Accumulate the results over entire sequences
@@ -189,6 +197,9 @@ def main(cfg, args):
             accumulator['accel'].append(accel)
             accumulator['wa_mpjpe'].append(wa_mpjpe)
             accumulator['w_mpjpe'].append(w_mpjpe)
+            accumulator['RTE'].append(rte)
+            accumulator['jitter'].append(jitter)
+            accumulator['FS'].append(foot_sliding)
             # =======>
             
     for k, v in accumulator.items():
@@ -198,7 +209,6 @@ def main(cfg, args):
     log_str = f'Evaluation on EMDB {args.eval_split}, '
     log_str += ' '.join([f'{k.upper()}: {v:.4f},'for k,v in accumulator.items()])
     logger.info(log_str)
-            
             
 if __name__ == '__main__':
     cfg, cfg_file, args = parse_args(test=True)

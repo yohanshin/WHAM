@@ -1,7 +1,7 @@
 import os
-import time
 import os.path as osp
 from collections import defaultdict
+from time import time
 
 import torch
 import joblib
@@ -52,20 +52,27 @@ def main(cfg, args):
     bar = Bar('Inference', fill='#', max=len(eval_loader))
     with torch.no_grad():
         for i in range(len(eval_loader)):
+            time_dict = {}
+            _t = time()
+            
             # Original batch
             batch = eval_loader.dataset.load_data(i, False)
             x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
+            time_dict['prepare_batch'] = time() - _t; _t = time()
             
             # <======= Inference
             if cfg.FLIP_EVAL:
                 flipped_batch = eval_loader.dataset.load_data(i, True)
                 f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, True)
+                time_dict['prepare_batch_flipped'] = time() - _t; _t = time()
             
                 # Forward pass with flipped input
                 flipped_pred = network(f_x, f_inits, f_features, **f_kwargs)
+                time_dict['inference_flipped'] = time() - _t; _t = time()
                 
             # Forward pass with normal input
             pred = network(x, inits, features, **kwargs)
+            time_dict['inference'] = time() - _t; _t = time()
             
             if cfg.FLIP_EVAL:
                 # Merge two predictions
@@ -79,6 +86,7 @@ def main(cfg, args):
                 network.pred_pose = avg_pose.view_as(network.pred_pose)
                 network.pred_shape = avg_shape.view_as(network.pred_shape)
                 pred = network.forward_smpl(**kwargs)
+                time_dict['averaging'] = time() - _t; _t = time()
             # =======>
             
             # <======= Build predicted SMPL
@@ -88,6 +96,7 @@ def main(cfg, args):
                                pose2rot=False)
             pred_verts = pred_output.vertices.cpu()
             pred_j3d = torch.matmul(J_regressor_eval, pred_output.vertices).cpu()
+            time_dict['building prediction'] = time() - _t; _t = time()
             # =======>
             
             # <======= Build groundtruth SMPL (from SMPLX)
@@ -102,6 +111,7 @@ def main(cfg, args):
                 betas=gt['betas'][0])
             target_verts = torch.matmul(smplx2smpl, target_output.vertices.cuda()).cpu()
             target_j3d = torch.matmul(J_regressor_eval, target_verts.to(cfg.DEVICE)).cpu()
+            time_dict['building target'] = time() - _t; _t = time()
             # =======>
             
             # <======= Compute performance of the current sequence
@@ -114,9 +124,11 @@ def main(cfg, args):
             pve = torch.sqrt(((pred_verts - target_verts) ** 2).sum(dim=-1)).mean(dim=-1).numpy() * m2mm
             accel = compute_error_accel(joints_pred=pred_j3d, joints_gt=target_j3d)[1:-1]
             accel = accel * (30 ** 2)       # per frame^s to per s^2
+            time_dict['evaluating'] = time() - _t; _t = time()
             # =======>
             
-            summary_string = f'{batch["vid"]} | PA-MPJPE: {pa_mpjpe.mean():.1f}   MPJPE: {mpjpe.mean():.1f}   PVE: {pve.mean():.1f}'
+            # summary_string = f'{batch["vid"]} | PA-MPJPE: {pa_mpjpe.mean():.1f}   MPJPE: {mpjpe.mean():.1f}   PVE: {pve.mean():.1f}'
+            summary_string = f'{batch["vid"]} | ' + '   '.join([f'{k}: {v:.1f} s' for k, v in time_dict.items()])
             bar.suffix = summary_string
             bar.next()
             
@@ -125,6 +137,7 @@ def main(cfg, args):
             accumulator['mpjpe'].append(mpjpe)
             accumulator['pve'].append(pve)
             accumulator['accel'].append(accel)
+            
             # =======>
             
     for k, v in accumulator.items():
