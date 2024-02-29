@@ -12,7 +12,7 @@ from loguru import logger
 from progress.bar import Bar
 
 from configs.config import get_cfg_defaults
-from lib.data._custom import CustomDataset
+from lib.data.datasets import CustomDataset
 from lib.utils.imutils import avg_preds
 from lib.utils.transforms import matrix_to_axis_angle
 from lib.models import build_network, build_body_model

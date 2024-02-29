@@ -76,7 +76,6 @@ class Network(nn.Module):
                                 return_full_pose=not self.training,
                                 **kwargs,
                                 )
-        kp3d = self.output.joints
         
         # Feet location in global coordinate
         feet_world = self.compute_global_feet()
@@ -88,13 +87,19 @@ class Network(nn.Module):
                   'betas': self.pred_shape, 
                   'cam': self.pred_cam,
                   'poses_root_cam': self.output.global_orient,
+                  'poses_root_r6d': self.pred_root,
                   'verts_cam': self.output.vertices}
         
         if self.training:
-            pass     # TODO: Update training code
+            output.update({
+                'vel_root': self.pred_vel,
+                'pose_root': self.pred_root,
+                'kp3d': self.output.joints,
+                'kp3d_nn': self.pred_kp3d,
+                'full_kp2d': self.output.full_joints2d,
+                'weak_kp2d': self.output.weak_joints2d,
+            })
         else:
-            pose = transforms.matrix_to_axis_angle(self.output.full_pose).reshape(-1, 72)
-            theta = torch.cat((self.output.full_cam, pose, self.pred_shape.squeeze(0)), dim=-1)
             output.update({
                 'poses_root_r6d': self.pred_root,
                 'trans_cam': self.output.full_cam,

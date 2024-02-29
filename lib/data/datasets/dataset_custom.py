@@ -3,14 +3,12 @@ from __future__ import print_function
 from __future__ import division
 
 import torch
-import numpy as np
 
-from configs import constants as _C
-from .normalizer import Normalizer
-from lib.utils import transforms
-from lib.models import build_body_model
-from lib.utils.kp_utils import root_centering
-from lib.utils.imutils import compute_cam_intrinsics
+from ..utils.normalizer import Normalizer
+from ...models import build_body_model
+from ...utils import transforms
+from ...utils.kp_utils import root_centering
+from ...utils.imutils import compute_cam_intrinsics
 
 KEYPOINTS_THR = 0.3
 

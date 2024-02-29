@@ -233,7 +233,6 @@ class TrajectoryRefiner(nn.Module):
         b, f = context.shape[:2]
         
         # Register values
-        pred_pose = output['pose'].clone().detach()
         pred_root = output['poses_root_r6d'].clone().detach()
         feet = output['feet'].clone().detach()
         contact = output['contact'].clone().detach()

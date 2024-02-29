@@ -2,7 +2,7 @@ import torch
 import random
 import numpy as np
 
-from lib.utils.imutils import transform_keypoints
+from ...utils.imutils import transform_keypoints
 
 class Normalizer:
     def __init__(self, cfg):

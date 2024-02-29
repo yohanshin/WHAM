@@ -20,7 +20,7 @@ class PATHS:
     EMDB_PTH = f'{root}/EMDB'
     
     # Processed labels
-    AMASS_LABEL = f'{root}/processed_data/amass.pth'
+    AMASS_LABEL = f'{root}/parsed_data/amass.pth'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS

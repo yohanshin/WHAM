@@ -215,7 +215,10 @@ def prepare_output_dir(cfg, cfg_file):
 
 def prepare_groundtruth(batch, device):
     groundtruths = dict()
-    gt_keys = ['pose', 'cam', 'betas', 'kp3d']
+    gt_keys = ['pose', 'cam', 'betas', 'kp3d', 'bbox']          # Evaluation
+    gt_keys += ['pose_root', 'vel_root', 'weak_kp2d',           # Training
+                'full_kp2d', 'contact',
+                'has_smpl', 'has_full_screen', 'has_verts']
     for gt_key in gt_keys:
         if gt_key in batch.keys():
             dtype = torch.float32 if batch[gt_key].dtype == torch.float64 else batch[gt_key].dtype

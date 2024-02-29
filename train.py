@@ -10,9 +10,10 @@ from torch.utils.tensorboard import SummaryWriter
 
 from configs.config import parse_args
 from lib.core.trainer import Trainer
-from lib.core.evaluator import Evaluator
+from lib.core.loss import WHAMLoss
+
 from lib.utils.utils import prepare_output_dir
-from lib.data.dataloader import setup_dloader
+from lib.data.dataloader import setup_dloaders
 from lib.utils.utils import create_logger, get_optimizer
 from lib.models import build_network, build_body_model
 
@@ -27,7 +28,6 @@ def setup_seed(seed):
 
 
 def main(cfg):
-    from lib.core.loss import WHAMLoss
     
     logger = create_logger(cfg.LOGDIR, phase='debug' if cfg.DEBUG else 'train')
     logger.info(f'GPU name -> {torch.cuda.get_device_name()}')
@@ -38,8 +38,7 @@ def main(cfg):
     writer.add_text('config', pprint.pformat(cfg), 0)
     
     # ========= Dataloaders ========= #
-    # data_loaders = setup_dloader(cfg, cfg.TRAIN.DATASET_EVAL, 'val')
-    data_loaders = setup_dloader(cfg, cfg.TRAIN.DATASET_EVAL, 'test')
+    data_loaders = setup_dloaders(cfg, cfg.TRAIN.DATASET_EVAL, 'val')
     logger.info(f'Dataset loaded')
     
     # ========= Network and Optimizer ========= #
@@ -67,7 +66,7 @@ def main(cfg):
     # Seed
     if cfg.SEED_VALUE >= 0:
         setup_seed(cfg.SEED_VALUE)
-    
+
     # ========= Start Training ========= #
     Trainer(
         data_loaders=data_loaders,
@@ -78,7 +77,6 @@ def main(cfg):
         train_stage=cfg.TRAIN.STAGE,
         start_epoch=cfg.TRAIN.START_EPOCH,
         end_epoch=cfg.TRAIN.END_EPOCH,
-        cam_loss_epoch=cfg.MODEL.CAM_LOSS_EPOCH,
         checkpoint=cfg.TRAIN.CHECKPOINT,
         device=cfg.DEVICE,
         writer=writer,
