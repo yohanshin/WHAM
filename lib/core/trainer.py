@@ -126,8 +126,6 @@ class Trainer():
         start = time.time()
         summary_string = ''
         
-        np.random.seed(1)
-        torch.manual_seed(1)
         bar = Bar(f'Epoch {self.epoch + 1}/{self.end_epoch}', fill='#', max=len(self.train_loader))
         for i, batch in enumerate(self.train_loader):
             
@@ -140,7 +138,7 @@ class Trainer():
             timer['forward'] = time.time() - start
             start = time.time()
             # =======>
-            
+
             # <======= Backprop            
             loss, loss_dict = self.criterion(pred, gt)
             timer['loss'] = time.time() - start

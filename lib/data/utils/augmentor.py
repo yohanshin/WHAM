@@ -102,7 +102,8 @@ class SMPLAugmentor():
     def get_global_augmentation(self, ):
         """Global coordinate augmentation. Random rotation around y-axis"""
         
-        angle_y = torch.rand(1) * 2 * np.pi * float(self.train)
+        # angle_y = torch.rand(1) * 2 * np.pi * float(self.train)
+        angle_y = 0.0
         aa = torch.tensor([0.0, angle_y, 0.0]).float().unsqueeze(0)
         rmat = transforms.axis_angle_to_matrix(aa)
 

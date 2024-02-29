@@ -204,7 +204,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     cfg = get_cfg_defaults()
-    cfg.merge_from_file('configs/yamls/demo_w_fit.yaml')
+    cfg.merge_from_file('configs/yamls/demo.yaml')
     
     logger.info(f'GPU name -> {torch.cuda.get_device_name()}')
     logger.info(f'GPU feat -> {torch.cuda.get_device_properties("cuda")}')    

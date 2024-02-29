@@ -68,7 +68,9 @@ class WHAMLoss(nn.Module):
         pred_weak_kp2d = pred['weak_kp2d']
         pred_contact = pred['contact']
         pred_vel_root = pred['vel_root']
-        pred_pose_root = pred['pose_root'][:, 1:]
+        pred_pose_root = pred['poses_root_r6d'][:, 1:]
+        pred_vel_root_ref = pred['vel_root_refined']
+        pred_pose_root_ref = pred['poses_root_r6d_refined'][:, 1:]
         
         gt_betas = gt['betas']
         gt_pose = gt['pose']
@@ -146,6 +148,15 @@ class WHAMLoss(nn.Module):
             gt_contact,
             self.criterion_noreduce
         )
+        
+        loss_vel_root_ref, loss_pose_root_ref = root_loss(
+            pred_vel_root_ref, 
+            pred_pose_root_ref,
+            gt_vel_root,
+            gt_pose_root,
+            gt_contact,
+            self.criterion_noreduce
+        )
                 
         loss_keypoints = loss_keypoints_full + loss_keypoints_weak
         loss_keypoints *= self.keypoint_2d_loss_weight
@@ -153,8 +164,8 @@ class WHAMLoss(nn.Module):
         loss_keypoints_3d_nn *= self.keypoint_3d_loss_weight
         loss_cascaded *= self.cascaded_loss_weight
         loss_contact *= self.contact_loss_weight
-        loss_vel_root *= self.root_loss_weight / 5
-        loss_pose_root *= self.root_loss_weight * 100
+        loss_root = (loss_vel_root / 5 + loss_pose_root * 100) * self.root_loss_weight
+        loss_root_ref = (loss_vel_root_ref / 5 + loss_pose_root_ref * 100) * self.root_loss_weight
 
         loss_regr_pose *= self.pose_loss_weight
         loss_regr_betas *= self.shape_loss_weight
@@ -167,8 +178,8 @@ class WHAMLoss(nn.Module):
             '3d_nn': loss_keypoints_3d_nn * self.loss_weight,
             'casc': loss_cascaded * self.loss_weight,
             'contact': loss_contact * self.loss_weight,
-            'root_v': loss_vel_root * self.loss_weight,
-            'root_r': loss_pose_root * self.loss_weight,
+            'root': loss_root * self.loss_weight,
+            'root_ref': loss_root_ref * self.loss_weight,
         }
         
         loss = sum(loss for loss in loss_dict.values())
