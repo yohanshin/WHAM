@@ -253,15 +253,7 @@ class Trainer():
         target_j3ds = torch.from_numpy(target_j3ds).float()
 
         print(f'Evaluating on {pred_j3ds.shape[0]} number of poses...')
-        pred_pelvis = (pred_j3ds[:,[2],:] + pred_j3ds[:,[3],:]) / 2.0
-        target_pelvis = (target_j3ds[:,[2],:] + target_j3ds[:,[3],:]) / 2.0
-
-        pred_j3ds -= pred_pelvis
-        target_j3ds -= target_pelvis
         
-        if self.valid_loader.dataset.__name__ != 'MPII3D':
-            pred_j3ds = pred_j3ds[..., :14, :]
-
         errors = torch.sqrt(((pred_j3ds - target_j3ds) ** 2).sum(dim=-1)).mean(dim=-1).cpu().numpy()
         S1_hat = batch_compute_similarity_transform_torch(pred_j3ds, target_j3ds)
         errors_pa = torch.sqrt(((S1_hat - target_j3ds) ** 2).sum(dim=-1)).mean(dim=-1).cpu().numpy()
