@@ -29,7 +29,6 @@ class WHAMLoss(nn.Module):
         self.keypoint_3d_loss_weight = cfg.LOSS.JOINT3D_LOSS_WEIGHT
         self.cascaded_loss_weight = cfg.LOSS.CASCADED_LOSS_WEIGHT
         self.contact_loss_weight = cfg.LOSS.CONTACT_LOSS_WEIGHT
-        self.root_loss_weight = cfg.LOSS.ROOT_LOSS_WEIGHT
         self.root_vel_loss_weight = cfg.LOSS.ROOT_VEL_LOSS_WEIGHT
         self.root_pose_loss_weight = cfg.LOSS.ROOT_POSE_LOSS_WEIGHT
         self.sliding_loss_weight = cfg.LOSS.SLIDING_LOSS_WEIGHT
