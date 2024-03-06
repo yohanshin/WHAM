@@ -35,16 +35,6 @@ from lib.models import build_body_model
 
 logger = logging.getLogger(__name__)
 
-def setup_seed(seed):
-    import random
-    """ Setup seed for reproducibility """
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-
 class Trainer():
     def __init__(self, 
                  data_loaders,
@@ -308,15 +298,14 @@ class Trainer():
                 f.write(str(float(performance)))
 
     def fit(self):
-        # setup_seed(1)
         for epoch in range(self.start_epoch, self.end_epoch):
             self.epoch = epoch
             self.train()
             self.validate()
             performance = self.evaluate()
 
+            self.criterion.step()
             if self.lr_scheduler is not None:
-                # self.lr_scheduler.step(performance)
                 self.lr_scheduler.step()
 
             # log the learning rate

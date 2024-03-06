@@ -6,9 +6,8 @@ import torch
 from torch import nn
 
 from configs import constants as _C
-from lib.utils import transforms
 from lib.models.layers import (MotionEncoder, MotionDecoder, TrajectoryDecoder, TrajectoryRefiner, Integrator, 
-                               rollout_global_motion, compute_camera_pose, reset_root_velocity, compute_camera_motion)
+                               rollout_global_motion, reset_root_velocity, compute_camera_motion)
 
 
 class Network(nn.Module):
@@ -123,20 +122,6 @@ class Network(nn.Module):
 
         
     def refine_trajectory(self, output, cam_angvel, return_y_up, **kwargs):
-        # pred_root = output['poses_root_r6d'].clone().detach()
-        # pred_vel = self.pred_vel
-        # root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
-        # if return_y_up:
-        #     import numpy as np
-        #     from lib.utils.transforms import axis_angle_to_matrix
-        #     yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
-        #     root_world = yup2ydown.mT @ root_world
-        #     trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
-            
-        # output.update({
-        #     'poses_root_world': root_world,
-        #     'trans_world': trans_world,
-        # })
         
         # --------- Refine trajectory --------- #
         update_vel = reset_root_velocity(self.smpl, self.output, self.pred_contact, self.pred_root, self.pred_vel, thr=0.5)

@@ -30,6 +30,8 @@ class WHAMLoss(nn.Module):
         self.cascaded_loss_weight = cfg.LOSS.CASCADED_LOSS_WEIGHT
         self.contact_loss_weight = cfg.LOSS.CONTACT_LOSS_WEIGHT
         self.root_loss_weight = cfg.LOSS.ROOT_LOSS_WEIGHT
+        self.root_vel_loss_weight = cfg.LOSS.ROOT_VEL_LOSS_WEIGHT
+        self.root_pose_loss_weight = cfg.LOSS.ROOT_POSE_LOSS_WEIGHT
         self.sliding_loss_weight = cfg.LOSS.SLIDING_LOSS_WEIGHT
         self.camera_loss_weight = cfg.LOSS.CAMERA_LOSS_WEIGHT
         self.loss_weight = cfg.LOSS.LOSS_WEIGHT
@@ -53,8 +55,14 @@ class WHAMLoss(nn.Module):
         ]
         self.theta_weights = torch.tensor([[theta_weights]]).float().to(device)
         self.theta_weights /= self.theta_weights.mean()
-        
         self.kp_weights = torch.tensor([kp_weights]).float().to(device)
+        
+        self.epoch = -1
+        self.step()
+
+    def step(self):
+        self.epoch += 1
+        self.skip_camera_loss = self.epoch < self.cfg.LOSS.CAMERA_LOSS_SKIP_EPOCH
 
     def forward(self, pred, gt):
         
@@ -169,7 +177,8 @@ class WHAMLoss(nn.Module):
             pred_cam_r,
             gt_cam_r,
             gt_cam_angvel[:, 1:],
-            self.criterion_noreduce
+            self.criterion_noreduce,
+            self.skip_camera_loss
         )
                 
         # Foot sliding loss
@@ -184,8 +193,8 @@ class WHAMLoss(nn.Module):
         loss_keypoints_3d_nn *= self.keypoint_3d_loss_weight
         loss_cascaded *= self.cascaded_loss_weight
         loss_contact *= self.contact_loss_weight
-        loss_root = (loss_vel_root / 5 + loss_pose_root * 100) * self.root_loss_weight
-        loss_root_ref = (loss_vel_root_ref / 5 + loss_pose_root_ref * 100) * self.root_loss_weight
+        loss_root = loss_vel_root * self.root_vel_loss_weight + loss_pose_root * self.root_pose_loss_weight
+        loss_root_ref = loss_vel_root_ref * self.root_vel_loss_weight + loss_pose_root_ref * self.root_pose_loss_weight
 
         loss_regr_pose *= self.pose_loss_weight
         loss_regr_betas *= self.shape_loss_weight
@@ -203,6 +212,8 @@ class WHAMLoss(nn.Module):
             'contact': loss_contact * self.loss_weight,
             'root': loss_root * self.loss_weight,
             'root_ref': loss_root_ref * self.loss_weight,
+            'sliding': loss_sliding,
+            'camera': loss_camera,
         }
         
         loss = sum(loss for loss in loss_dict.values())
@@ -344,11 +355,12 @@ def camera_loss(
     pred_cam_r,
     gt_cam_r,
     cam_angvel,
-    criterion
+    criterion,
+    skip
 ):
     mask = (gt_cam_r != 0.0).all(dim=-1).all(dim=-1)
 
-    if mask.any():
+    if mask.any() and not skip:
         # Camera pose loss in 6D representation
         loss_r = criterion(pred_cam_r, gt_cam_r)[mask].mean()
         
