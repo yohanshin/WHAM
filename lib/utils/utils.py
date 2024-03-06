@@ -217,7 +217,7 @@ def prepare_groundtruth(batch, device):
     groundtruths = dict()
     gt_keys = ['pose', 'cam', 'betas', 'kp3d', 'bbox']          # Evaluation
     gt_keys += ['pose_root', 'vel_root', 'weak_kp2d',           # Training
-                'full_kp2d', 'contact',
+                'full_kp2d', 'contact', 'R', 'cam_angvel',
                 'has_smpl', 'has_full_screen', 'has_verts']
     for gt_key in gt_keys:
         if gt_key in batch.keys():

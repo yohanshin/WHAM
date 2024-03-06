@@ -30,6 +30,8 @@ class WHAMLoss(nn.Module):
         self.cascaded_loss_weight = cfg.LOSS.CASCADED_LOSS_WEIGHT
         self.contact_loss_weight = cfg.LOSS.CONTACT_LOSS_WEIGHT
         self.root_loss_weight = cfg.LOSS.ROOT_LOSS_WEIGHT
+        self.sliding_loss_weight = cfg.LOSS.SLIDING_LOSS_WEIGHT
+        self.camera_loss_weight = cfg.LOSS.CAMERA_LOSS_WEIGHT
         self.loss_weight = cfg.LOSS.LOSS_WEIGHT
         
         kp_weights = [
@@ -71,6 +73,7 @@ class WHAMLoss(nn.Module):
         pred_pose_root = pred['poses_root_r6d'][:, 1:]
         pred_vel_root_ref = pred['vel_root_refined']
         pred_pose_root_ref = pred['poses_root_r6d_refined'][:, 1:]
+        pred_cam_r = transforms.matrix_to_rotation_6d(pred['R'])
         
         gt_betas = gt['betas']
         gt_pose = gt['pose']
@@ -80,6 +83,8 @@ class WHAMLoss(nn.Module):
         gt_contact = gt['contact']
         gt_vel_root = gt['vel_root']
         gt_pose_root = gt['pose_root'][:, 1:]
+        gt_cam_angvel = gt['cam_angvel']
+        gt_cam_r = transforms.matrix_to_rotation_6d(gt['R'][:, 1:])
         bbox = gt['bbox']
         # =======>
         
@@ -149,6 +154,7 @@ class WHAMLoss(nn.Module):
             self.criterion_noreduce
         )
         
+        # Root velocity loss
         loss_vel_root_ref, loss_pose_root_ref = root_loss(
             pred_vel_root_ref, 
             pred_pose_root_ref,
@@ -156,6 +162,20 @@ class WHAMLoss(nn.Module):
             gt_pose_root,
             gt_contact,
             self.criterion_noreduce
+        )
+        
+        # Camera prediction loss
+        loss_camera = camera_loss(
+            pred_cam_r,
+            gt_cam_r,
+            gt_cam_angvel[:, 1:],
+            self.criterion_noreduce
+        )
+                
+        # Foot sliding loss
+        loss_sliding = sliding_loss(
+            pred['feet'],
+            gt_contact,
         )
                 
         loss_keypoints = loss_keypoints_full + loss_keypoints_weak
@@ -169,6 +189,9 @@ class WHAMLoss(nn.Module):
 
         loss_regr_pose *= self.pose_loss_weight
         loss_regr_betas *= self.shape_loss_weight
+        
+        loss_sliding *= self.sliding_loss_weight
+        loss_camera *= self.camera_loss_weight
 
         loss_dict = {
             'pose': loss_regr_pose * self.loss_weight,
@@ -315,3 +338,44 @@ def smpl_losses(
         loss_regr_betas = torch.FloatTensor(1).fill_(0.).to(gt_pose.device)[0]
 
     return loss_regr_pose, loss_regr_betas
+
+
+def camera_loss(
+    pred_cam_r,
+    gt_cam_r,
+    cam_angvel,
+    criterion
+):
+    mask = (gt_cam_r != 0.0).all(dim=-1).all(dim=-1)
+
+    if mask.any():
+        # Camera pose loss in 6D representation
+        loss_r = criterion(pred_cam_r, gt_cam_r)[mask].mean()
+        
+        # Reconstruct camera angular velocity and compute reconstruction loss
+        pred_R = transforms.rotation_6d_to_matrix(pred_cam_r)
+        cam_angvel_from_R = transforms.matrix_to_rotation_6d(pred_R[:, :-1] @ pred_R[:, 1:].transpose(-1, -2))
+        cam_angvel_from_R = (cam_angvel_from_R - torch.tensor([[[1, 0, 0, 0, 1, 0]]]).to(cam_angvel)) * 30
+        loss_a = criterion(cam_angvel, cam_angvel_from_R)[mask].mean()
+        
+        loss = loss_r + loss_a
+    else:
+        loss = torch.FloatTensor(1).fill_(0.).to(gt_cam_r.device)[0]
+        
+    return loss
+
+
+def sliding_loss(
+    foot_position,
+    contact_prob,
+):
+    """ Compute foot skate loss when foot is assumed to be on contact with ground
+    
+    foot_position: 3D foot (heel and toe) position, torch.Tensor (B, F, 4, 3)
+    contact_prob: contact probability of foot (heel and toe), torch.Tensor (B, F, 4)
+    """
+    
+    contact_mask = (contact_prob > 0.5).detach().float()
+    foot_velocity = foot_position[:, 1:] - foot_position[:, :-1]
+    loss = (torch.norm(foot_velocity, dim=-1) * contact_mask[:, 1:]).mean()
+    return loss

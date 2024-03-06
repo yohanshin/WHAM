@@ -61,7 +61,6 @@ class AMASSDataset(BaseDataset):
         gt_kp3d = target['kp3d']
         inpt_kp3d = self.VideoAugmentor(gt_kp3d[:, :self.n_joints, :-1].clone())
         kp2d = perspective_projection(inpt_kp3d, self.cam_intrinsics)
-        
         mask = self.VideoAugmentor.get_mask()
         kp2d, bbox = self.keypoints_normalizer(kp2d, target['res'], self.cam_intrinsics, 224, 224)    
         
@@ -117,7 +116,7 @@ class AMASSDataset(BaseDataset):
         
         # Augmentation 2. Sequence speed augmentation
         target = self.SequenceAugmentor(target)
-        
+
         # Get world-coordinate SMPL
         target = self.forward_smpl(target)
         

@@ -67,7 +67,7 @@ class Network(nn.Module):
         feet_cam = self.output.feet.reshape(self.b, self.f, -1, 3) + self.output.full_cam.reshape(self.b, self.f, 1, 3)
         feet_world = (cam_R.mT @ (feet_cam - cam_T.unsqueeze(-2)).mT).mT
         
-        return feet_world
+        return feet_world, cam_R
     
     def forward_smpl(self, **kwargs):
         self.output = self.smpl(self.pred_pose, 
@@ -78,7 +78,7 @@ class Network(nn.Module):
                                 )
         
         # Feet location in global coordinate
-        feet_world = self.compute_global_feet()
+        feet_world, cam_R = self.compute_global_feet()
         
         # Return output
         output = {'feet': feet_world,
@@ -98,6 +98,7 @@ class Network(nn.Module):
                 'kp3d_nn': self.pred_kp3d,
                 'full_kp2d': self.output.full_joints2d,
                 'weak_kp2d': self.output.weak_joints2d,
+                'R': cam_R,
             })
         else:
             output.update({
@@ -122,12 +123,27 @@ class Network(nn.Module):
 
         
     def refine_trajectory(self, output, cam_angvel, return_y_up, **kwargs):
+        # pred_root = output['poses_root_r6d'].clone().detach()
+        # pred_vel = self.pred_vel
+        # root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
+        # if return_y_up:
+        #     import numpy as np
+        #     from lib.utils.transforms import axis_angle_to_matrix
+        #     yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
+        #     root_world = yup2ydown.mT @ root_world
+        #     trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
+            
+        # output.update({
+        #     'poses_root_world': root_world,
+        #     'trans_world': trans_world,
+        # })
+        
         # --------- Refine trajectory --------- #
         update_vel = reset_root_velocity(self.smpl, self.output, self.pred_contact, self.pred_root, self.pred_vel, thr=0.5)
         
         if not self.training:
             self.pred_vel = update_vel.clone()
-            output['feet'] = self.compute_global_feet(True)
+            output['feet'], R = self.compute_global_feet(True)
             
         output = self.trajectory_refiner(self.old_motion_context, update_vel, output, cam_angvel, return_y_up=return_y_up)
         # --------- #
@@ -137,7 +153,7 @@ class Network(nn.Module):
     
     def forward(self, x, inits, img_features=None, mask=None, init_root=None, cam_angvel=None,
                 cam_intrinsics=None, bbox=None, res=None, return_y_up=False, **kwargs):
-        
+
         x = self.preprocess(x, mask)
         init_kp, init_smpl = inits
         

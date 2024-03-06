@@ -316,7 +316,8 @@ class Trainer():
             performance = self.evaluate()
 
             if self.lr_scheduler is not None:
-                self.lr_scheduler.step(performance)
+                # self.lr_scheduler.step(performance)
+                self.lr_scheduler.step()
 
             # log the learning rate
             for param_group in self.optimizer.param_groups[:2]:

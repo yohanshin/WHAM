@@ -52,11 +52,18 @@ def main(cfg):
         momentum=cfg.TRAIN.MOMENTUM,
         stage=cfg.TRAIN.STAGE)
     
-    lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #     optimizer,
+    #     mode='min',
+    #     factor=cfg.TRAIN.LR_DECAY_RATIO,
+    #     patience=cfg.TRAIN.LR_PATIENCE,
+    #     verbose=True,
+    # )
+    
+    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
-        mode='min',
-        factor=cfg.TRAIN.LR_DECAY_RATIO,
-        patience=cfg.TRAIN.LR_PATIENCE,
+        milestones=[50, 75],
+        gamma=0.1,
         verbose=True,
     )
     

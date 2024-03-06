@@ -21,7 +21,10 @@ from lib.eval.eval_utils import (
     batch_compute_similarity_transform_torch,
     compute_jpe,
     first_align_joints,
-    global_align_joints
+    global_align_joints,
+    compute_rte,
+    compute_jitter,
+    compute_foot_sliding
 )
 from lib.utils import transforms
 from lib.utils.utils import prepare_output_dir
@@ -130,13 +133,13 @@ def main(cfg, args):
             
             # Convert WHAM global orient to Y-up coordinate
             poses_root = pred['poses_root_world'].squeeze(0)
-            trans = pred['trans_world'].squeeze(0)
+            pred_trans = pred['trans_world'].squeeze(0)
             poses_root = yup2ydown.mT @ poses_root
-            trans = (yup2ydown.mT @ trans.unsqueeze(-1)).squeeze(-1)
+            pred_trans = (yup2ydown.mT @ pred_trans.unsqueeze(-1)).squeeze(-1)
             
             # <======= Build predicted motion
             # Predicted global motion
-            pred_glob = smpl['neutral'](body_pose=pred['poses_body'], global_orient=poses_root.unsqueeze(1), betas=pred['betas'].squeeze(0), transl=trans, pose2rot=False)
+            pred_glob = smpl['neutral'](body_pose=pred['poses_body'], global_orient=poses_root.unsqueeze(1), betas=pred['betas'].squeeze(0), transl=pred_trans, pose2rot=False)
             pred_j3d_glob = torch.matmul(smpl['neutral'].J_regressor.unsqueeze(0), pred_glob.vertices)
             
             # Predicted local motion
@@ -182,6 +185,11 @@ def main(cfg, args):
             wa_mpjpe = np.concatenate(wa_mpjpe) * m2mm
             # =======>
             
+            # Additional metrics
+            rte = compute_rte(torch.from_numpy(trans[masks]), pred_trans.cpu()) * 1e2
+            jitter = compute_jitter(pred_glob, fps=30)
+            foot_sliding = compute_foot_sliding(target_glob, pred_glob, masks) * m2mm
+            
             # <======= Accumulate the results over entire sequences
             accumulator['pa_mpjpe'].append(pa_mpjpe)
             accumulator['mpjpe'].append(mpjpe)
@@ -189,6 +197,9 @@ def main(cfg, args):
             accumulator['accel'].append(accel)
             accumulator['wa_mpjpe'].append(wa_mpjpe)
             accumulator['w_mpjpe'].append(w_mpjpe)
+            accumulator['RTE'].append(rte)
+            accumulator['jitter'].append(jitter)
+            accumulator['FS'].append(foot_sliding)
             # =======>
             
     for k, v in accumulator.items():

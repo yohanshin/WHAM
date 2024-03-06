@@ -413,3 +413,69 @@ def align_pcl(Y, X, weight=None, fixed_scale=False):
     t = my - s * torch.matmul(R, mx[..., None])[..., 0]  # (*, 3)
 
     return s, R, t
+
+def compute_foot_sliding(target_output, pred_output, masks, thr=1e-2):
+    """compute foot sliding error
+    The foot ground contact label is computed by the threshold of 1 cm/frame
+    Args:
+        target_output (SMPL ModelOutput).
+        pred_output (SMPL ModelOutput).
+        masks (N).
+    Returns:
+        error (N frames in contact).
+    """
+    
+    # Foot vertices idxs
+    foot_idxs = [3216, 3387, 6617, 6787]
+    
+    # Compute contact label
+    foot_loc = target_output.vertices[masks][:, foot_idxs]
+    foot_disp = (foot_loc[1:] - foot_loc[:-1]).norm(2, dim=-1)
+    contact = foot_disp[:] < thr
+    
+    pred_feet_loc = pred_output.vertices[:, foot_idxs]
+    pred_disp = (pred_feet_loc[1:] - pred_feet_loc[:-1]).norm(2, dim=-1)
+    
+    error = pred_disp[contact]
+    
+    return error.cpu().numpy()
+
+
+def compute_jitter(pred_output, fps=30):
+    """compute jitter of the motion
+    Args:
+        pred_output (SMPL ModelOutput).
+        fps (float).
+    Returns:
+        jitter (N-3).
+    """
+    
+    pred3d = pred_output.joints[:, :24]
+        
+    pred_jitter = torch.norm(
+        (pred3d[3:] - 3 * pred3d[2:-1] + 3 * pred3d[1:-2] - pred3d[:-3]) * (fps**3),
+        dim=2,
+    ).mean(dim=-1)
+    
+    return pred_jitter.cpu().numpy() / 10.0
+
+
+def compute_rte(target_trans, pred_trans):
+    # Compute the global alignment
+    _, rot, trans = align_pcl(target_trans[None, :], pred_trans[None, :], fixed_scale=True)
+    pred_trans_hat = (
+        torch.einsum("tij,tnj->tni", rot, pred_trans[None, :]) + trans[None, :]
+    )[0]
+    
+    # Compute the entire displacement of ground truth trajectory
+    disps, disp = [], 0
+    for p1, p2 in zip(target_trans, target_trans[1:]):
+        delta = (p2 - p1).norm(2, dim=-1)
+        disp += delta
+        disps.append(disp)
+    
+    # Compute absolute root-translation-error (RTE)
+    rte = torch.norm(target_trans - pred_trans_hat, 2, dim=-1)
+    
+    # Normalize it to the displacement
+    return (rte / disp).numpy()

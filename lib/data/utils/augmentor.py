@@ -162,7 +162,7 @@ class CameraAugmentor:
     rz_factor = np.pi/8
     
     pitch_std = np.pi/8
-    pitch_mean = np.pi/36
+    pitch_mean = np.pi/12
     roll_std = np.pi/36
     t_factor = 1
     
@@ -192,14 +192,14 @@ class CameraAugmentor:
     def create_camera(self, target):
         """Create the initial frame camera pose"""
         yaw = np.random.rand() * 2 * np.pi
-        pitch = np.random.normal(scale=self.pitch_std)
-        roll = np.random.normal(scale=self.roll_std)
+        pitch = np.random.normal(scale=self.pitch_std) + self.pitch_mean
+        # roll = np.random.normal(scale=self.roll_std)
+        roll = np.pi / 12
         
         yaw_rm = transforms.axis_angle_to_matrix(torch.tensor([[0, yaw, 0]]).float())
         pitch_rm = transforms.axis_angle_to_matrix(torch.tensor([[pitch, 0, 0]]).float())
         roll_rm = transforms.axis_angle_to_matrix(torch.tensor([[0, 0, roll]]).float())
         R = (roll_rm @ pitch_rm @ yaw_rm)
-        
         # Place people in the scene
         tz = random.random() * self.tz_scale + self.tz_min
         max_d = self.w * tz / self.f / 2
