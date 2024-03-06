@@ -54,8 +54,8 @@ def main(cfg):
     
     lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[50, 70],
-        gamma=0.1,
+        milestones=cfg.TRAIN.MILESTONES,
+        gamma=cfg.TRAIN.LR_DECAY_RATIO,
         verbose=True,
     )
     
