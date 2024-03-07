@@ -38,7 +38,7 @@ def main(cfg):
     writer.add_text('config', pprint.pformat(cfg), 0)
     
     # ========= Dataloaders ========= #
-    data_loaders = setup_dloaders(cfg, cfg.TRAIN.DATASET_EVAL, 'test')
+    data_loaders = setup_dloaders(cfg, cfg.TRAIN.DATASET_EVAL, 'val')
     logger.info(f'Dataset loaded')
     
     # ========= Network and Optimizer ========= #

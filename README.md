@@ -58,7 +58,7 @@ Please refer to [API](docs/API.md) for details.
 Please see [Dataset](docs/DATASET.md) for details.
 
 ## Evaluation
-```
+```bash
 # Evaluate on 3DPW dataset
 python -m lib.eval.evaluate_3dpw --cfg configs/yamls/demo.yaml TRAIN.CHECKPOINT checkpoints/wham_vit_w_3dpw.pth.tar
 
@@ -72,7 +72,18 @@ python -m lib.eval.evaluate_emdb --cfg configs/yamls/demo.yaml --eval-split 2 TR
 ```
 
 ## Training
-Will be updated.
+WHAM training involves into two different stages; (1) 2D to SMPL lifting through AMASS dataset and (2) finetuning with feature integration using the video datasets. Please see [Dataset](docs/DATASET.md) for preprocessing the training datasets.
+
+### Stage 1.
+```bash
+python train.py --cfg configs/yamls/stage1.yaml
+```
+
+### Stage 2.
+TBD
+
+### Train with BEDLAM
+TBD
 
 ## Acknowledgement
 We would like to sincerely appreciate Hongwei Yi and Silvia Zuffi for the discussion and proofreading. Part of this work was done when Soyong Shin was an intern at the Max Planck Institute for Intelligence System.
