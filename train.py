@@ -28,7 +28,10 @@ def setup_seed(seed):
 
 
 def main(cfg):
-    
+    # Seed
+    if cfg.SEED_VALUE >= 0:
+        setup_seed(cfg.SEED_VALUE)
+
     logger = create_logger(cfg.LOGDIR, phase='debug' if cfg.DEBUG else 'train')
     logger.info(f'GPU name -> {torch.cuda.get_device_name()}')
     logger.info(f'GPU feat -> {torch.cuda.get_device_properties("cuda")}')
@@ -62,10 +65,6 @@ def main(cfg):
     # ========= Loss function ========= #
     criterion = WHAMLoss(cfg, cfg.DEVICE)
     
-    # Seed
-    if cfg.SEED_VALUE >= 0:
-        setup_seed(cfg.SEED_VALUE)
-
     # ========= Start Training ========= #
     Trainer(
         data_loaders=data_loaders,

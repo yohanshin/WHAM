@@ -126,12 +126,12 @@ def main(cfg, args):
             
             # Groundtruth global motion
             target_glob = smpl[gender](body_pose=tt(poses_body), global_orient=tt(poses_root), betas=tt(betas), transl=tt(trans))
-            target_j3d_glob = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_glob.vertices)[masks]
+            target_j3d_glob = target_glob.joints[:, :24][masks]
             
             # Groundtruth local motion
             target_cam = smpl[gender](body_pose=tt(poses_body), global_orient=poses_root_cam, betas=tt(betas))
             target_verts_cam = target_cam.vertices[masks]
-            target_j3d_cam = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_verts_cam)
+            target_j3d_cam = target_cam.joints[:, :24][masks]
             # =======>
             
             # Convert WHAM global orient to Y-up coordinate
@@ -143,12 +143,12 @@ def main(cfg, args):
             # <======= Build predicted motion
             # Predicted global motion
             pred_glob = smpl['neutral'](body_pose=pred['poses_body'], global_orient=poses_root.unsqueeze(1), betas=pred['betas'].squeeze(0), transl=pred_trans, pose2rot=False)
-            pred_j3d_glob = torch.matmul(smpl['neutral'].J_regressor.unsqueeze(0), pred_glob.vertices)
+            pred_j3d_glob = pred_glob.joints[:, :24]
             
             # Predicted local motion
             pred_cam = smpl['neutral'](body_pose=pred['poses_body'], global_orient=pred['poses_root_cam'], betas=pred['betas'].squeeze(0), pose2rot=False)
             pred_verts_cam = pred_cam.vertices
-            pred_j3d_cam = torch.matmul(smpl['neutral'].J_regressor.unsqueeze(0), pred_verts_cam)
+            pred_j3d_cam = pred_cam.joints[:, :24]
             # =======>
             
             # <======= Evaluation on the local motion

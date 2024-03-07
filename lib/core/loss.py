@@ -161,7 +161,7 @@ class WHAMLoss(nn.Module):
             self.criterion_noreduce
         )
         
-        # Root velocity loss
+        # Root loss after trajectory refinement
         loss_vel_root_ref, loss_pose_root_ref = root_loss(
             pred_vel_root_ref, 
             pred_pose_root_ref,
@@ -211,11 +211,12 @@ class WHAMLoss(nn.Module):
             'contact': loss_contact * self.loss_weight,
             'root': loss_root * self.loss_weight,
             'root_ref': loss_root_ref * self.loss_weight,
-            'sliding': loss_sliding,
-            'camera': loss_camera,
+            'sliding': loss_sliding * self.loss_weight,
+            'camera': loss_camera * self.loss_weight,
         }
         
         loss = sum(loss for loss in loss_dict.values())
+        
         return loss, loss_dict
 
 
