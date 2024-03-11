@@ -56,11 +56,7 @@ class Network(nn.Module):
                                                     rnn_type=rnn_type,
                                                     n_layers=2)
     
-    def compute_global_feet(self, duplicate=False):
-        # Global motion
-        init_trans = None# if self.training else self.output.full_cam.reshape(self.b, self.f, 3)[:, [0]]
-        root_world, trans = rollout_global_motion(self.pred_root, self.pred_vel, init_trans)
-        
+    def compute_global_feet(self, root_world, trans):
         # # Compute world-coordinate motion
         cam_R, cam_T = compute_camera_motion(self.output, self.pred_pose[:, :, :6], root_world, trans, self.pred_cam)
         feet_cam = self.output.feet.reshape(self.b, self.f, -1, 3) + self.output.full_cam.reshape(self.b, self.f, 1, 3)
@@ -77,7 +73,8 @@ class Network(nn.Module):
                                 )
         
         # Feet location in global coordinate
-        feet_world, cam_R = self.compute_global_feet()
+        root_world, trans = rollout_global_motion(self.pred_root, self.pred_vel)
+        feet_world, cam_R = self.compute_global_feet(root_world, trans)
         
         # Return output
         output = {'feet': feet_world,
@@ -125,14 +122,14 @@ class Network(nn.Module):
         
         # --------- Refine trajectory --------- #
         update_vel = reset_root_velocity(self.smpl, self.output, self.pred_contact, self.pred_root, self.pred_vel, thr=0.5)
-        
-        if not self.training:
-            self.pred_vel = update_vel.clone()
-            output['feet'], R = self.compute_global_feet(True)
-            
         output = self.trajectory_refiner(self.old_motion_context, update_vel, output, cam_angvel, return_y_up=return_y_up)
         # --------- #
-        
+
+        # ---------  Compute refined feet --------- #
+        if self.training:
+            feet_world, cam_R = self.compute_global_feet(output['poses_root_world'], output['trans_world'])
+            output.update({'feet_refined': feet_world})
+
         return output
         
     

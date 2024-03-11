@@ -151,21 +151,22 @@ class Trainer():
             timer['batch'] = timer['data'] + timer['forward'] + timer['loss'] + timer['backward']
             start = time.time()
 
-            if (i + 1) % self.summary_iter == 0:
-                summary_string = f'({i + 1}/{len(self.train_loader)}) | Total: {bar.elapsed_td} ' \
-                                f'| loss: {losses.avg:.2f} | 2d: {kp_2d_loss.avg:.2f} ' \
-                                f'| 3d: {kp_3d_loss.avg:.2f} '
+            summary_string = f'({i + 1}/{len(self.train_loader)}) | Total: {bar.elapsed_td} ' \
+                            f'| loss: {losses.avg:.2f} | 2d: {kp_2d_loss.avg:.2f} ' \
+                            f'| 3d: {kp_3d_loss.avg:.2f} '
 
-                for k, v in loss_dict.items():
-                    if k in self.summary_loss_keys: 
-                        summary_string += f' | {k}: {v:.2f}'
+            for k, v in loss_dict.items():
+                if k in self.summary_loss_keys: 
+                    summary_string += f' | {k}: {v:.2f}'
+                if (i + 1) % self.summary_iter == 0:
                     self.writer.add_scalar('train_loss/'+k, v, global_step=self.train_global_step)
 
+            if (i + 1) % self.summary_iter == 0:
                 self.writer.add_scalar('train_loss/loss', total_loss.item(), global_step=self.train_global_step)
 
-                self.train_global_step += self.summary_iter
-                bar.suffix = summary_string
-                bar.next(self.summary_iter)
+            self.train_global_step += 1
+            bar.suffix = summary_string
+            bar.next(1)
                 
             if torch.isnan(total_loss):
                 exit('Nan value in loss, exiting!...')

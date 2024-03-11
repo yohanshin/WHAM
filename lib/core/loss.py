@@ -185,6 +185,12 @@ class WHAMLoss(nn.Module):
             pred['feet'],
             gt_contact,
         )
+        
+        # Foot sliding loss
+        loss_sliding_ref = sliding_loss(
+            pred['feet_refined'],
+            gt_contact,
+        )
                 
         loss_keypoints = loss_keypoints_full + loss_keypoints_weak
         loss_keypoints *= self.keypoint_2d_loss_weight
@@ -200,6 +206,7 @@ class WHAMLoss(nn.Module):
         
         loss_sliding *= self.sliding_loss_weight
         loss_camera *= self.camera_loss_weight
+        loss_sliding_ref *= self.sliding_loss_weight
 
         loss_dict = {
             'pose': loss_regr_pose * self.loss_weight,
@@ -213,6 +220,7 @@ class WHAMLoss(nn.Module):
             'root_ref': loss_root_ref * self.loss_weight,
             'sliding': loss_sliding * self.loss_weight,
             'camera': loss_camera * self.loss_weight,
+            'sliding_ref': loss_sliding_ref * self.loss_weight,
         }
         
         loss = sum(loss for loss in loss_dict.values())
