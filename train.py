@@ -59,7 +59,7 @@ def main(cfg):
         optimizer,
         milestones=cfg.TRAIN.MILESTONES,
         gamma=cfg.TRAIN.LR_DECAY_RATIO,
-        verbose=True,
+        verbose=False,
     )
     
     # ========= Loss function ========= #

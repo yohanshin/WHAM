@@ -121,7 +121,6 @@ class Trainer():
             
             # <======= Feedforward 
             x, inits, features, kwargs, gt = prepare_batch(batch, self.device, self.train_stage=='stage2')
-            
             timer['data'] = time.time() - start
             start = time.time()
             pred = self.network(x, inits, features, **kwargs)
