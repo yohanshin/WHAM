@@ -34,7 +34,6 @@ class DataFactory(torch.utils.data.Dataset):
     def prepare_video_batch(self):
         [ds.prepare_video_batch() for ds in self.datasets]
         self.lengths = [len(ds) for ds in self.datasets]
-        # self.length_real = sum(self.lengths[1:])
 
     def _set_partition(self, partition):
         self.partition = partition
@@ -51,16 +50,3 @@ class DataFactory(torch.utils.data.Dataset):
         for i in range(len(self.datasets)):
             if p <= self.partition[i]:
                 return self.datasets[i][index % self.lengths[i]]
-
-def setup_dloader(cfg):
-    n_workers = 0 if cfg.DEBUG or cfg.EVAL else min(8, cfg.TRAIN.BATCH_SIZE // 2)
-    dataset = DataFactory(cfg)
-    dloader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=cfg.TRAIN.BATCH_SIZE if not cfg.DEBUG else 1,
-        num_workers=n_workers,
-        shuffle=cfg.EVAL != True,
-        pin_memory=True,
-        collate_fn=make_collate_fn()
-    )
-    return dloader

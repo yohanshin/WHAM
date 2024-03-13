@@ -5,7 +5,6 @@ from __future__ import division
 from configs import constants as _C
 
 import torch
-import random
 import numpy as np
 from torch.nn import functional as F
 
@@ -75,12 +74,15 @@ class VideoAugmentor():
 class SMPLAugmentor():
     noise_scale = 1e-2
 
-    def __init__(self, cfg, train=True):
+    def __init__(self, cfg, augment=True):
         self.n_frames = cfg.DATASET.SEQLEN
-        self.train = train
+        self.augment = augment
 
     def __call__(self, target):
-        if not self.train:
+        if not self.augment:
+            # Only add initial frame augmentation
+            if not 'init_pose' in target:
+                target['init_pose'] = target['pose'][:1] @ self.get_initial_pose_augmentation()
             return target
 
         n_frames = target['pose'].shape[0]
@@ -102,7 +104,7 @@ class SMPLAugmentor():
     def get_global_augmentation(self, ):
         """Global coordinate augmentation. Random rotation around y-axis"""
         
-        angle_y = torch.rand(1) * 2 * np.pi * float(self.train)
+        angle_y = torch.rand(1) * 2 * np.pi * float(self.augment)
         aa = torch.tensor([0.0, angle_y, 0.0]).float().unsqueeze(0)
         rmat = transforms.axis_angle_to_matrix(aa)
 
@@ -113,7 +115,7 @@ class SMPLAugmentor():
         
         shape_noise = torch.normal(
             mean=torch.zeros((1, 10)),
-            std=torch.ones((1, 10)) * 0.1 * float(self.train)).expand(n_frames, 10)
+            std=torch.ones((1, 10)) * 0.1 * float(self.augment)).expand(n_frames, 10)
 
         return shape_noise
 
@@ -123,7 +125,7 @@ class SMPLAugmentor():
         euler = torch.normal(
             mean=torch.zeros((24, 3)),
             std=torch.ones((24, 3))
-        ) * self.noise_scale * float(self.train)
+        ) * self.noise_scale * float(self.augment)
         rmat = transforms.axis_angle_to_matrix(euler)
 
         return rmat.unsqueeze(0)
@@ -162,7 +164,7 @@ class CameraAugmentor:
     rz_factor = np.pi/8
     
     pitch_std = np.pi/8
-    pitch_mean = np.pi/12
+    pitch_mean = np.pi/36
     roll_std = np.pi/24
     t_factor = 1
     
@@ -201,7 +203,7 @@ class CameraAugmentor:
         R = (roll_rm @ pitch_rm @ yaw_rm)
         
         # Place people in the scene
-        tz = random.random() * self.tz_scale + self.tz_min
+        tz = np.random.rand() * self.tz_scale + self.tz_min
         max_d = self.w * tz / self.f / 2
         tx = np.random.normal(scale=0.25) * max_d
         ty = np.random.normal(scale=0.25) * max_d

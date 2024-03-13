@@ -67,7 +67,7 @@ class AMASSDataset(BaseDataset):
         target['bbox'] = bbox[1:]
         target['kp2d'] = kp2d
         target['mask'] = mask[1:]
-        target['features'] = torch.zeros((self.n_frames, self.d_img_feature)).float()
+        target['features'] = torch.zeros((self.SMPLAugmentor.n_frames, self.d_img_feature)).float()
         return target
     
     def get_groundtruth(self, target):
@@ -139,7 +139,7 @@ class AMASSDataset(BaseDataset):
                   'pose': pose, 
                   'transl': transl, 
                   'betas': betas})
-    
+
         return target
 
     def get_single_sequence(self, index):

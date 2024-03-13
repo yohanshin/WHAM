@@ -69,10 +69,10 @@ def compute_bbox_from_keypoints(X, do_augment=False, mask=None):
         return smoothed
     
     def do_augmentation(scale_factor=0.3, trans_factor=0.25):
-        _scaleFactor = random.uniform(1.0 - scale_factor, 1.2 + scale_factor)
+        _scaleFactor = np.random.uniform(1.0 - scale_factor, 1.2 + scale_factor)
         # _scaleFactor = random.uniform(1.2 - scale_factor, 1.2 + scale_factor)
-        _trans_x = random.uniform(-trans_factor, trans_factor)
-        _trans_y = random.uniform(-trans_factor, trans_factor)
+        _trans_x = np.random.uniform(-trans_factor, trans_factor)
+        _trans_y = np.random.uniform(-trans_factor, trans_factor)
         
         return _scaleFactor, _trans_x, _trans_y
     
