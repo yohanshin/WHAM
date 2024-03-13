@@ -21,6 +21,10 @@ class PATHS:
     
     # Processed labels
     AMASS_LABEL = f'{root}/parsed_data/amass.pth'
+    THREEDPW_LABEL = f'{root}/parsed_data/3dpw_dset_backbone.pth'    
+    MPII3D_LABEL = f'{root}/parsed_data/mpii3d_dset_backbone.pth'
+    HUMAN36M_LABEL = f'{root}/parsed_data/human36m_dset_backbone.pth'
+    INSTA_LABEL = f'{root}/parsed_data/insta_dset_backbone.pth'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS
