@@ -57,12 +57,12 @@ def main(cfg, args):
         for i in range(len(eval_loader)):
             # Original batch
             batch = eval_loader.dataset.load_data(i, False)
-            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
+            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, cfg.TRAIN.STAGE=='stage2')
             
             # <======= Inference
             if cfg.FLIP_EVAL:
                 flipped_batch = eval_loader.dataset.load_data(i, True)
-                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, True)
+                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, cfg.TRAIN.STAGE=='stage2')
             
                 # Forward pass with flipped input
                 flipped_pred = network(f_x, f_inits, f_features, **f_kwargs)

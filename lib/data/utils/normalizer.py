@@ -1,5 +1,4 @@
 import torch
-import random
 import numpy as np
 
 from ...utils.imutils import transform_keypoints
@@ -70,7 +69,6 @@ def compute_bbox_from_keypoints(X, do_augment=False, mask=None):
     
     def do_augmentation(scale_factor=0.3, trans_factor=0.25):
         _scaleFactor = np.random.uniform(1.0 - scale_factor, 1.2 + scale_factor)
-        # _scaleFactor = random.uniform(1.2 - scale_factor, 1.2 + scale_factor)
         _trans_x = np.random.uniform(-trans_factor, trans_factor)
         _trans_y = np.random.uniform(-trans_factor, trans_factor)
         
@@ -101,7 +99,6 @@ def compute_bbox_from_keypoints(X, do_augment=False, mask=None):
     scale = bbox_size * scaleFactor
     bbox = torch.stack((cx + trans_x * scale, cy + trans_y * scale, scale / 200))
     
-    # if mask is not None:
     if do_augment:
         bbox = torch.from_numpy(smooth_bbox(bbox.numpy()))
     

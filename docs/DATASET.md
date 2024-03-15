@@ -1,7 +1,7 @@
 # Dataset
 
 ## Training Data
-We use [AMASS](https://amass.is.tue.mpg.de/), [MPI-INF-3DHP](https://vcai.mpi-inf.mpg.de/3dhp-dataset/), [Human3.6M](http://vision.imar.ro/human3.6m/description.php), and [3DPW](https://virtualhumans.mpi-inf.mpg.de/3DPW/) datasets for training. Please register to their websites to download and process the data.
+We use [AMASS](https://amass.is.tue.mpg.de/), [InstaVariety](https://github.com/akanazawa/human_dynamics/blob/master/doc/insta_variety.md), [MPI-INF-3DHP](https://vcai.mpi-inf.mpg.de/3dhp-dataset/), [Human3.6M](http://vision.imar.ro/human3.6m/description.php), and [3DPW](https://virtualhumans.mpi-inf.mpg.de/3DPW/) datasets for training. Please register to their websites to download and process the data. You can download parsed ViT version of InstaVariety, MPI-INF-3DHP, Human3.6M, and 3DPW data from the [Google Drive](https://drive.google.com/drive/folders/13T2ghVvrw_fEk3X-8L0e6DVSYx_Og8o3?usp=sharing). You can save the data under `dataset/parsed_data` folder.
 
 After downloading AMASS dataset, you can process it by running:
 ```bash

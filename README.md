@@ -80,7 +80,10 @@ python train.py --cfg configs/yamls/stage1.yaml
 ```
 
 ### Stage 2.
-TBD
+Training stage 2 requires pretrained results from the stage 1. You can use your pretrained results, or download the weight from [Google Drive](https://drive.google.com/file/d/1Erjkho7O0bnZFawarntICRUCroaKabRE/view?usp=sharing) save as `checkpoints/wham_stage1.tar.pth`.
+```bash
+python train.py --cfg configs/yamls/stage2.yaml TRAIN.CHECKPOINT <path-to-stage1 results>
+```
 
 ### Train with BEDLAM
 TBD
@@ -94,7 +97,7 @@ The base implementation is largely borrowed from [VIBE](https://github.com/mkoca
 
 - [ ] Training implementation
 
-- [ ] Colab / Hugging face release
+- [x] Colab demo release
 
 - [x] Demo for custom videos
 

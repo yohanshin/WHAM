@@ -42,11 +42,15 @@ class DataFactory(torch.utils.data.Dataset):
         self.partition /= self.partition[-1]
 
     def __len__(self):
-        return max([l for l, r in zip(self.lengths, self.ratio) if r > 0])
+        return int(np.array([l for l, r in zip(self.lengths, self.ratio) if r > 0]).mean())
 
     def __getitem__(self, index):
         # Get the dataset to sample from
         p = np.random.rand()
         for i in range(len(self.datasets)):
             if p <= self.partition[i]:
-                return self.datasets[i][index % self.lengths[i]]
+                if len(self.datasets) == 1:
+                    return self.datasets[i][index % self.lengths[i]]
+                else:
+                    d_index = np.random.randint(0, self.lengths[i])
+                    return self.datasets[i][d_index]
