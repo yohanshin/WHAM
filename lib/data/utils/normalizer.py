@@ -67,7 +67,7 @@ def compute_bbox_from_keypoints(X, do_augment=False, mask=None):
         smoothed = np.array([signal.medfilt(param, int(30 / 2)) for param in bb])
         return smoothed
     
-    def do_augmentation(scale_factor=0.3, trans_factor=0.25):
+    def do_augmentation(scale_factor=0.2, trans_factor=0.05):
         _scaleFactor = np.random.uniform(1.0 - scale_factor, 1.2 + scale_factor)
         _trans_x = np.random.uniform(-trans_factor, trans_factor)
         _trans_y = np.random.uniform(-trans_factor, trans_factor)
