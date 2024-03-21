@@ -82,11 +82,28 @@ class Dataset3D(BaseDataset):
         target['full_kp2d'] = gt_kp2d
         target['weak_kp2d'] = torch.zeros_like(gt_kp2d)
         
-        # Foot ground contact labels
         if self.__name__ != 'ThreeDPW': # 3DPW does not contain world-coordinate motion
+            # Foot ground contact labels for Human36M and MPII3D
             target['contact'] = self.labels['stationaries'][start_index+1:end_index+1].clone()
+            # No SMPL vertices available
         else:
+            # No foot ground contact label available for 3DPW
             target['contact'] = torch.ones((self.n_frames - 1, 4)) * (-1)
+            
+        if self.has_verts:
+            # SMPL vertices available for 3DPW
+            with torch.no_grad():
+                start_index, end_index = self.video_indices[index]
+                gender = self.labels['gender'][start_index].item()
+                output = self.smpl_gender[gender](
+                    body_pose=target['pose'][1:, 1:],
+                    global_orient=target['pose'][1:, :1],
+                    betas=target['betas'][1:],
+                    pose2rot=False,
+                )
+                target['verts'] = output.vertices.clone()
+        else:
+            target['verts'] = torch.zeros((self.n_frames - 1, 6890, 3)).float()
             
         return target
     
@@ -124,17 +141,13 @@ class Dataset3D(BaseDataset):
             yup2ydown = torch.matmul(yaw, yup2ydown)
             R = torch.matmul(R, yup2ydown)
             
-        # target['R'] = R
-        # if self.__name__ == 'ThreeDPW':
-        #     target['R'] = torch.zeros_like(target['R']) # No camera labels for 3DPW
-        
         return target
 
     def get_single_sequence(self, index):
         # Universal target
         target = {'has_smpl': torch.tensor(self.has_smpl),
                   'has_full_screen': torch.tensor(True),
-                  'has_verts': torch.tensor(False),
+                  'has_verts': torch.tensor(self.has_verts),
                   'transl': torch.zeros((self.n_frames, 3)),
                   
                   # Null camera motion

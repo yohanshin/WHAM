@@ -7,6 +7,7 @@ import numpy as np
 
 from .amass import AMASSDataset
 from .videos import Human36M, ThreeDPW, MPII3D, InstaVariety
+from .bedlam import BEDLAMDataset
 from lib.utils.data_utils import make_collate_fn
 
 
@@ -23,6 +24,10 @@ class DataFactory(torch.utils.data.Dataset):
                 Human36M(cfg), MPII3D(cfg), InstaVariety(cfg)
             ]
             self.dataset_names = ['AMASS', '3DPW', 'Human36M', 'MPII3D', 'Insta']
+            
+            if len(cfg.DATASET.RATIO) == 6: # Use BEDLAM
+                self.datasets.append(BEDLAMDataset(cfg))
+                self.dataset_names.append('BEDLAM')
 
         self._set_partition(cfg.DATASET.RATIO)
         self.lengths = [len(ds) for ds in self.datasets]

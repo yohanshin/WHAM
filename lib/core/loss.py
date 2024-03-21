@@ -28,6 +28,7 @@ class WHAMLoss(nn.Module):
         self.keypoint_2d_loss_weight = cfg.LOSS.JOINT2D_LOSS_WEIGHT
         self.keypoint_3d_loss_weight = cfg.LOSS.JOINT3D_LOSS_WEIGHT
         self.cascaded_loss_weight = cfg.LOSS.CASCADED_LOSS_WEIGHT
+        self.vertices_loss_weight = cfg.LOSS.VERTS3D_LOSS_WEIGHT
         self.contact_loss_weight = cfg.LOSS.CONTACT_LOSS_WEIGHT
         self.root_vel_loss_weight = cfg.LOSS.ROOT_VEL_LOSS_WEIGHT
         self.root_pose_loss_weight = cfg.LOSS.ROOT_POSE_LOSS_WEIGHT
@@ -131,6 +132,13 @@ class WHAMLoss(nn.Module):
             self.kp_weights[:, :self.n_joints] * 0.5,
             criterion=self.criterion_noreduce,
         )
+        
+        loss_vertices = vertices_loss(
+            pred['verts_cam'],
+            gt['verts'],
+            gt['has_verts'],
+            criterion=self.criterion_noreduce,
+        )
                 
         # Compute loss on SMPL parameters
         smpl_mask = gt['has_smpl']
@@ -197,6 +205,7 @@ class WHAMLoss(nn.Module):
         loss_keypoints_3d_smpl *= self.keypoint_3d_loss_weight
         loss_keypoints_3d_nn *= self.keypoint_3d_loss_weight
         loss_cascaded *= self.cascaded_loss_weight
+        loss_vertices *= self.vertices_loss_weight
         loss_contact *= self.contact_loss_weight
         loss_root = loss_vel_root * self.root_vel_loss_weight + loss_pose_root * self.root_pose_loss_weight
         loss_root_ref = loss_vel_root_ref * self.root_vel_loss_weight + loss_pose_root_ref * self.root_pose_loss_weight
@@ -215,6 +224,7 @@ class WHAMLoss(nn.Module):
             '3d': loss_keypoints_3d_smpl * self.loss_weight,
             '3d_nn': loss_keypoints_3d_nn * self.loss_weight,
             'casc': loss_cascaded * self.loss_weight,
+            'v3d': loss_vertices * self.loss_weight,
             'contact': loss_contact * self.loss_weight,
             'root': loss_root * self.loss_weight,
             'root_ref': loss_root_ref * self.loss_weight,
@@ -334,6 +344,31 @@ def keypoint_3d_loss(
         ), dim=1).mean() * conf.mean()
     else:
         loss = torch.FloatTensor(1).fill_(0.).to(gt_keypoints_3d.device)[0]
+    return loss
+
+
+def vertices_loss(
+        pred_verts,
+        gt_verts,
+        mask,
+        criterion,
+):
+    
+    if mask.sum() > 0:
+        # Align
+        pred_verts = pred_verts.view_as(gt_verts)
+        pred_verts = pred_verts - pred_verts.mean(-2, True)
+        gt_verts = gt_verts - gt_verts.mean(-2, True)
+        
+        # loss = criterion(pred_verts, gt_verts).mean() * mask.float().mean()
+        # loss = torch.mean(
+        #     `(torch.norm(pred_verts - gt_verts, dim=-1)[mask]`
+        # ), dim=1).mean() * mask.float().mean()
+        loss = torch.mean(
+            (torch.norm(pred_verts - gt_verts, p=1, dim=-1)[mask]
+        ), dim=1).mean() * mask.float().mean()
+    else:
+        loss = torch.FloatTensor(1).fill_(0.).to(gt_verts.device)[0]
     return loss
 
 

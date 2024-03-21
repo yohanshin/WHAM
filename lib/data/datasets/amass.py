@@ -78,6 +78,7 @@ class AMASSDataset(BaseDataset):
         target['full_kp2d'] = torch.cat((gt_kp2d, torch.ones_like(gt_kp2d[..., :1]) * float(self.supervise_pose)), dim=-1)[1:]
         target['weak_kp2d'] = torch.zeros_like(target['full_kp2d'])
         target['init_kp3d'] = root_centering(gt_kp3d[:1, :self.n_joints].clone()).reshape(1, -1)
+        target['verts'] = torch.zeros((self.SMPLAugmentor.n_frames, 6890, 3)).float()
         
         # GT 2. Root pose
         vel_world = (target['transl'][1:] - target['transl'][:-1])

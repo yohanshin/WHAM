@@ -81,6 +81,8 @@ class Dataset2D(BaseDataset):
         target['full_kp2d'] = torch.zeros_like(gt_kp2d)
         target['kp3d'] = torch.zeros((kp2d.shape[0], 31, 4))
         
+        # No SMPL vertices available
+        target['verts'] = torch.zeros((self.n_frames - 1, 6890, 3)).float()
         return target
         
     def get_init_frame(self, target):

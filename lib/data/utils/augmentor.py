@@ -125,7 +125,7 @@ class SMPLAugmentor():
         euler = torch.normal(
             mean=torch.zeros((24, 3)),
             std=torch.ones((24, 3))
-        ) * self.noise_scale * float(self.augment)
+        ) * self.noise_scale #* float(self.augment)
         rmat = transforms.axis_angle_to_matrix(euler)
 
         return rmat.unsqueeze(0)

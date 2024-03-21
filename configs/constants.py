@@ -25,6 +25,7 @@ class PATHS:
     MPII3D_LABEL = f'{root}/parsed_data/mpii3d_dset_backbone.pth'
     HUMAN36M_LABEL = f'{root}/parsed_data/human36m_dset_backbone.pth'
     INSTA_LABEL = f'{root}/parsed_data/insta_dset_backbone.pth'
+    BEDLAM_LABEL = f'{root}/parsed_data/bedlam_train_backbone.pth'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS

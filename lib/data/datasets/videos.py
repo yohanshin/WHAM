@@ -20,6 +20,7 @@ class Human36M(Dataset3D):
 
         self.has_3d = True
         self.has_smpl = False
+        self.has_verts = False
 
         # Among 31 joints format, 14 common joints are avaialable
         self.mask = torch.zeros(_C.KEYPOINTS.NUM_JOINTS + 14)
@@ -41,6 +42,7 @@ class MPII3D(Dataset3D):
         
         self.has_3d = True
         self.has_smpl = False
+        self.has_verts = False
         
         # Among 31 joints format, 14 common joints are avaialable
         self.mask = torch.zeros(_C.KEYPOINTS.NUM_JOINTS + 14)
@@ -62,6 +64,7 @@ class ThreeDPW(Dataset3D):
         
         self.has_3d = True
         self.has_smpl = True
+        self.has_verts = False  # In testing
         
         # Among 31 joints format, 14 common joints are avaialable
         self.mask = torch.zeros(_C.KEYPOINTS.NUM_JOINTS + 14)
