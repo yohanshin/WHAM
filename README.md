@@ -95,7 +95,7 @@ The base implementation is largely borrowed from [VIBE](https://github.com/mkoca
 
 ## TODO
 
-- [] Data preprocessing
+- [ ] Data preprocessing
 
 - [x] Training implementation
 
