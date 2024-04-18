@@ -16,15 +16,18 @@ from configs.config import parse_args
 from lib.data.dataloader import setup_eval_dataloader
 from lib.models import build_network, build_body_model
 from lib.eval.eval_utils import (
-    compute_error_accel,
-    batch_align_by_pelvis,
-    batch_compute_similarity_transform_torch,
     compute_jpe,
+    compute_rte,
+    compute_jitter,
+    compute_error_accel,
+    compute_foot_sliding,
+    batch_align_by_pelvis,
     first_align_joints,
     global_align_joints,
     compute_rte,
     compute_jitter,
     compute_foot_sliding
+    batch_compute_similarity_transform_torch,
 )
 from lib.utils import transforms
 from lib.utils.utils import prepare_output_dir
@@ -186,6 +189,11 @@ def main(cfg, args):
             
             w_mpjpe = np.concatenate(w_mpjpe) * m2mm
             wa_mpjpe = np.concatenate(wa_mpjpe) * m2mm
+            
+            # Additional metrics
+            rte = compute_rte(torch.from_numpy(trans[masks]), pred_trans.cpu()) * 1e2
+            jitter = compute_jitter(pred_glob, fps=30)
+            foot_sliding = compute_foot_sliding(target_glob, pred_glob, masks) * m2mm
             # =======>
             
             # Additional metrics
@@ -212,7 +220,6 @@ def main(cfg, args):
     log_str = f'Evaluation on EMDB {args.eval_split}, '
     log_str += ' '.join([f'{k.upper()}: {v:.4f},'for k,v in accumulator.items()])
     logger.info(log_str)
-            
             
 if __name__ == '__main__':
     cfg, cfg_file, args = parse_args(test=True)

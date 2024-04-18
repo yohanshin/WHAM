@@ -414,6 +414,7 @@ def align_pcl(Y, X, weight=None, fixed_scale=False):
 
     return s, R, t
 
+
 def compute_foot_sliding(target_output, pred_output, masks, thr=1e-2):
     """compute foot sliding error
     The foot ground contact label is computed by the threshold of 1 cm/frame
