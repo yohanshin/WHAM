@@ -7,16 +7,16 @@ import numpy as np
 from skimage.util.shape import view_as_windows
 
 from configs import constants as _C
-from .normalizer import Normalizer
-from lib.utils.imutils import transform
+from .utils.normalizer import Normalizer
+from ..utils.imutils import transform
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, cfg, training=True):
         super(BaseDataset, self).__init__()
-        self.n_joints = _C.KEYPOINTS.NUM_JOINTS
         self.epoch = 0
-        self.n_frames = cfg.DATASET.SEQLEN + 1
         self.training = training
+        self.n_joints = _C.KEYPOINTS.NUM_JOINTS
+        self.n_frames = cfg.DATASET.SEQLEN + 1
         self.keypoints_normalizer = Normalizer(cfg)
 
     def prepare_video_batch(self):
@@ -55,15 +55,15 @@ class BaseDataset(torch.utils.data.Dataset):
     def get_single_sequence(self, index):
         NotImplementedError('get_single_sequence is not implemented')
         
-    def compute_cam_intrinsics(self, res):
+    def get_naive_intrinsics(self, res):
+        # Assume 45 degree FOV
         img_w, img_h = res
-        focal_length = (img_w * img_w + img_h * img_h) ** 0.5
-        cam_intrinsics = torch.eye(3).repeat(1, 1, 1).float()
-        cam_intrinsics[:, 0, 0] = focal_length
-        cam_intrinsics[:, 1, 1] = focal_length
-        cam_intrinsics[:, 0, 2] = img_w/2.
-        cam_intrinsics[:, 1, 2] = img_h/2.
-        return cam_intrinsics
+        self.focal_length = (img_w * img_w + img_h * img_h) ** 0.5
+        self.cam_intrinsics = torch.eye(3).repeat(1, 1, 1).float()
+        self.cam_intrinsics[:, 0, 0] = self.focal_length
+        self.cam_intrinsics[:, 1, 1] = self.focal_length
+        self.cam_intrinsics[:, 0, 2] = img_w/2.
+        self.cam_intrinsics[:, 1, 2] = img_h/2.
     
     def j2d_processing(self, kp, bbox):
         center = bbox[..., :2]

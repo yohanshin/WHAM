@@ -1,8 +1,7 @@
 import torch
-import random
 import numpy as np
 
-from lib.utils.imutils import transform_keypoints
+from ...utils.imutils import transform_keypoints
 
 class Normalizer:
     def __init__(self, cfg):
@@ -68,11 +67,10 @@ def compute_bbox_from_keypoints(X, do_augment=False, mask=None):
         smoothed = np.array([signal.medfilt(param, int(30 / 2)) for param in bb])
         return smoothed
     
-    def do_augmentation(scale_factor=0.3, trans_factor=0.25):
-        # _scaleFactor = random.uniform(1.0 - scale_factor, 1.2 + scale_factor)
-        _scaleFactor = random.uniform(1.2 - scale_factor, 1.2 + scale_factor)
-        _trans_x = random.uniform(-trans_factor, trans_factor)
-        _trans_y = random.uniform(-trans_factor, trans_factor)
+    def do_augmentation(scale_factor=0.2, trans_factor=0.05):
+        _scaleFactor = np.random.uniform(1.0 - scale_factor, 1.2 + scale_factor)
+        _trans_x = np.random.uniform(-trans_factor, trans_factor)
+        _trans_y = np.random.uniform(-trans_factor, trans_factor)
         
         return _scaleFactor, _trans_x, _trans_y
     
@@ -100,7 +98,8 @@ def compute_bbox_from_keypoints(X, do_augment=False, mask=None):
     bbox_size = torch.stack((bbox_w, bbox_h)).max(0)[0]
     scale = bbox_size * scaleFactor
     bbox = torch.stack((cx + trans_x * scale, cy + trans_y * scale, scale / 200))
-    if mask is not None:
+    
+    if do_augment:
         bbox = torch.from_numpy(smooth_bbox(bbox.numpy()))
     
     return bbox.T

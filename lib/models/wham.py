@@ -4,11 +4,12 @@ from __future__ import division
 
 import torch
 from torch import nn
+import numpy as np
 
 from configs import constants as _C
-from lib.utils import transforms
 from lib.models.layers import (MotionEncoder, MotionDecoder, TrajectoryDecoder, TrajectoryRefiner, Integrator, 
-                               rollout_global_motion, compute_camera_pose, reset_root_velocity, compute_camera_motion)
+                               rollout_global_motion, reset_root_velocity, compute_camera_motion)
+from lib.utils.transforms import axis_angle_to_matrix
 
 
 class Network(nn.Module):
@@ -57,17 +58,13 @@ class Network(nn.Module):
                                                     rnn_type=rnn_type,
                                                     n_layers=2)
     
-    def compute_global_feet(self, duplicate=False):
-        # Global motion
-        init_trans = None# if self.training else self.output.full_cam.reshape(self.b, self.f, 3)[:, [0]]
-        root_world, trans = rollout_global_motion(self.pred_root, self.pred_vel, init_trans)
-        
+    def compute_global_feet(self, root_world, trans):
         # # Compute world-coordinate motion
         cam_R, cam_T = compute_camera_motion(self.output, self.pred_pose[:, :, :6], root_world, trans, self.pred_cam)
         feet_cam = self.output.feet.reshape(self.b, self.f, -1, 3) + self.output.full_cam.reshape(self.b, self.f, 1, 3)
         feet_world = (cam_R.mT @ (feet_cam - cam_T.unsqueeze(-2)).mT).mT
         
-        return feet_world
+        return feet_world, cam_R
     
     def forward_smpl(self, **kwargs):
         self.output = self.smpl(self.pred_pose, 
@@ -76,10 +73,10 @@ class Network(nn.Module):
                                 return_full_pose=not self.training,
                                 **kwargs,
                                 )
-        kp3d = self.output.joints
         
         # Feet location in global coordinate
-        feet_world = self.compute_global_feet()
+        root_world, trans = rollout_global_motion(self.pred_root, self.pred_vel)
+        feet_world, cam_R = self.compute_global_feet(root_world, trans)
         
         # Return output
         output = {'feet': feet_world,
@@ -88,19 +85,27 @@ class Network(nn.Module):
                   'betas': self.pred_shape, 
                   'cam': self.pred_cam,
                   'poses_root_cam': self.output.global_orient,
+                  'poses_root_r6d': self.pred_root,
+                  'vel_root': self.pred_vel,
+                  'pose_root': self.pred_root,
                   'verts_cam': self.output.vertices}
         
         if self.training:
-            pass     # TODO: Update training code
+            output.update({
+                'kp3d': self.output.joints,
+                'kp3d_nn': self.pred_kp3d,
+                'full_kp2d': self.output.full_joints2d,
+                'weak_kp2d': self.output.weak_joints2d,
+                'R': cam_R,
+            })
         else:
-            pose = transforms.matrix_to_axis_angle(self.output.full_pose).reshape(-1, 72)
-            theta = torch.cat((self.output.full_cam, pose, self.pred_shape.squeeze(0)), dim=-1)
             output.update({
                 'poses_root_r6d': self.pred_root,
                 'trans_cam': self.output.full_cam,
                 'poses_body': self.output.body_pose})
         
         return output        
+    
     
     def preprocess(self, x, mask):
         self.b, self.f = x.shape[:2]
@@ -114,25 +119,45 @@ class Network(nn.Module):
         x[_mask] = 0.0
         x = x + _mask_embedding
         return x
+    
+    
+    def rollout(self, output, pred_root, pred_vel, return_y_up):
+        root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
+        
+        if return_y_up:
+            yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
+            root_world = yup2ydown.mT @ root_world
+            trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
+            
+        output.update({
+            'poses_root_world': root_world,
+            'trans_world': trans_world,
+        })
+        
+        return output
 
         
     def refine_trajectory(self, output, cam_angvel, return_y_up, **kwargs):
+        
         # --------- Refine trajectory --------- #
         update_vel = reset_root_velocity(self.smpl, self.output, self.pred_contact, self.pred_root, self.pred_vel, thr=0.5)
-        
-        if not self.training:
-            self.pred_vel = update_vel.clone()
-            output['feet'] = self.compute_global_feet(True)
-            
         output = self.trajectory_refiner(self.old_motion_context, update_vel, output, cam_angvel, return_y_up=return_y_up)
         # --------- #
         
+        # Do rollout
+        output = self.rollout(output, output['poses_root_r6d_refined'], output['vel_root_refined'], return_y_up)
+
+        # ---------  Compute refined feet --------- #
+        if self.training:
+            feet_world, cam_R = self.compute_global_feet(output['poses_root_world'], output['trans_world'])
+            output.update({'feet_refined': feet_world})
+
         return output
         
     
     def forward(self, x, inits, img_features=None, mask=None, init_root=None, cam_angvel=None,
-                cam_intrinsics=None, bbox=None, res=None, return_y_up=False, **kwargs):
-        
+                cam_intrinsics=None, bbox=None, res=None, return_y_up=False, refine_traj=True, **kwargs):
+
         x = self.preprocess(x, mask)
         init_kp, init_smpl = inits
         
@@ -167,7 +192,10 @@ class Network(nn.Module):
         # --------- #
         
         # --------- Refine trajectory --------- #
-        output = self.refine_trajectory(output, cam_angvel, return_y_up)
+        if refine_traj:
+            output = self.refine_trajectory(output, cam_angvel, return_y_up)
+        else:
+            output = self.rollout(output, self.pred_root, self.pred_vel, return_y_up)
         # --------- #
         
         return output

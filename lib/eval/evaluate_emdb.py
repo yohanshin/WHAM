@@ -24,6 +24,9 @@ from lib.eval.eval_utils import (
     batch_align_by_pelvis,
     first_align_joints,
     global_align_joints,
+    compute_rte,
+    compute_jitter,
+    compute_foot_sliding
     batch_compute_similarity_transform_torch,
 )
 from lib.utils import transforms
@@ -39,6 +42,9 @@ Current implementation requires EMDB dataset downloaded at ./datasets/EMDB/
 m2mm = 1e3
 @torch.no_grad()
 def main(cfg, args):
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    
     logger.info(f'GPU name -> {torch.cuda.get_device_name()}')
     logger.info(f'GPU feat -> {torch.cuda.get_device_properties("cuda")}')    
     
@@ -69,7 +75,7 @@ def main(cfg, args):
         for i in range(len(eval_loader)):
             # Original batch
             batch = eval_loader.dataset.load_data(i, False)
-            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
+            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, cfg.TRAIN.STAGE == 'stage2')
             
             # Align with groundtruth data to the first frame
             cam2yup = batch['R'][0][:1].to(cfg.DEVICE)
@@ -81,7 +87,7 @@ def main(cfg, args):
             
             if cfg.FLIP_EVAL:
                 flipped_batch = eval_loader.dataset.load_data(i, True)
-                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, True)
+                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, cfg.TRAIN.STAGE == 'stage2')
             
                 # Forward pass with flipped input
                 flipped_pred = network(f_x, f_inits, f_features, **f_kwargs)
@@ -123,12 +129,12 @@ def main(cfg, args):
             
             # Groundtruth global motion
             target_glob = smpl[gender](body_pose=tt(poses_body), global_orient=tt(poses_root), betas=tt(betas), transl=tt(trans))
-            target_j3d_glob = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_glob.vertices)[masks]
+            target_j3d_glob = target_glob.joints[:, :24][masks]
             
             # Groundtruth local motion
             target_cam = smpl[gender](body_pose=tt(poses_body), global_orient=poses_root_cam, betas=tt(betas))
             target_verts_cam = target_cam.vertices[masks]
-            target_j3d_cam = torch.matmul(smpl[gender].J_regressor.unsqueeze(0), target_verts_cam)
+            target_j3d_cam = target_cam.joints[:, :24][masks]
             # =======>
             
             # Convert WHAM global orient to Y-up coordinate
@@ -140,12 +146,12 @@ def main(cfg, args):
             # <======= Build predicted motion
             # Predicted global motion
             pred_glob = smpl['neutral'](body_pose=pred['poses_body'], global_orient=poses_root.unsqueeze(1), betas=pred['betas'].squeeze(0), transl=pred_trans, pose2rot=False)
-            pred_j3d_glob = torch.matmul(smpl['neutral'].J_regressor.unsqueeze(0), pred_glob.vertices)
+            pred_j3d_glob = pred_glob.joints[:, :24]
             
             # Predicted local motion
             pred_cam = smpl['neutral'](body_pose=pred['poses_body'], global_orient=pred['poses_root_cam'], betas=pred['betas'].squeeze(0), pose2rot=False)
             pred_verts_cam = pred_cam.vertices
-            pred_j3d_cam = torch.matmul(smpl['neutral'].J_regressor.unsqueeze(0), pred_verts_cam)
+            pred_j3d_cam = pred_cam.joints[:, :24]
             # =======>
             
             # <======= Evaluation on the local motion
@@ -189,6 +195,11 @@ def main(cfg, args):
             jitter = compute_jitter(pred_glob, fps=30)
             foot_sliding = compute_foot_sliding(target_glob, pred_glob, masks) * m2mm
             # =======>
+            
+            # Additional metrics
+            rte = compute_rte(torch.from_numpy(trans[masks]), pred_trans.cpu()) * 1e2
+            jitter = compute_jitter(pred_glob, fps=30)
+            foot_sliding = compute_foot_sliding(target_glob, pred_glob, masks) * m2mm
             
             # <======= Accumulate the results over entire sequences
             accumulator['pa_mpjpe'].append(pa_mpjpe)

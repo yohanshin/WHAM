@@ -12,10 +12,21 @@ IMG_FEAT_DIM = {
 N_JOINTS = 17
 root = 'dataset'
 class PATHS:
+    # Raw data folders
     PARSED_DATA = f'{root}/parsed_data'
+    AMASS_PTH = f'{root}/AMASS'
     THREEDPW_PTH = f'{root}/3DPW'
+    HUMAN36M_PTH = f'{root}/Human36M'
     RICH_PTH = f'{root}/RICH'
     EMDB_PTH = f'{root}/EMDB'
+    
+    # Processed labels
+    AMASS_LABEL = f'{root}/parsed_data/amass.pth'
+    THREEDPW_LABEL = f'{root}/parsed_data/3dpw_dset_backbone.pth'    
+    MPII3D_LABEL = f'{root}/parsed_data/mpii3d_dset_backbone.pth'
+    HUMAN36M_LABEL = f'{root}/parsed_data/human36m_dset_backbone.pth'
+    INSTA_LABEL = f'{root}/parsed_data/insta_dset_backbone.pth'
+    BEDLAM_LABEL = f'{root}/parsed_data/bedlam_train_backbone.pth'
 
 class KEYPOINTS:
     NUM_JOINTS = N_JOINTS

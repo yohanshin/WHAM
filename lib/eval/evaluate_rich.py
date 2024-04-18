@@ -28,6 +28,9 @@ m2mm = 1e3
 smplx2smpl = torch.from_numpy(joblib.load(_C.BMODEL.SMPLX2SMPL)['matrix']).unsqueeze(0).float().cuda()
 @torch.no_grad()
 def main(cfg, args):
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+    
     logger.info(f'GPU name -> {torch.cuda.get_device_name()}')
     logger.info(f'GPU feat -> {torch.cuda.get_device_properties("cuda")}')    
     
@@ -57,14 +60,12 @@ def main(cfg, args):
             
             # Original batch
             batch = eval_loader.dataset.load_data(i, False)
-            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, True)
-            time_dict['prepare_batch'] = time() - _t; _t = time()
+            x, inits, features, kwargs, gt = prepare_batch(batch, cfg.DEVICE, cfg.TRAIN.STAGE=='stage2')
             
             # <======= Inference
             if cfg.FLIP_EVAL:
                 flipped_batch = eval_loader.dataset.load_data(i, True)
-                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, True)
-                time_dict['prepare_batch_flipped'] = time() - _t; _t = time()
+                f_x, f_inits, f_features, f_kwargs, _ = prepare_batch(flipped_batch, cfg.DEVICE, cfg.TRAIN.STAGE=='stage2')
             
                 # Forward pass with flipped input
                 flipped_pred = network(f_x, f_inits, f_features, **f_kwargs)

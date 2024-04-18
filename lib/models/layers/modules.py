@@ -233,7 +233,6 @@ class TrajectoryRefiner(nn.Module):
         b, f = context.shape[:2]
         
         # Register values
-        pred_pose = output['pose'].clone().detach()
         pred_root = output['poses_root_r6d'].clone().detach()
         feet = output['feet'].clone().detach()
         contact = output['contact'].clone().detach()
@@ -246,18 +245,18 @@ class TrajectoryRefiner(nn.Module):
         pred_root[:, 1:] = pred_root[:, 1:] + delta_root
         pred_vel = pred_vel + delta_vel
 
-        root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
+        # root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
         
-        if return_y_up:
-            yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
-            root_world = yup2ydown.mT @ root_world
-            trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
+        # if return_y_up:
+        #     yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
+        #     root_world = yup2ydown.mT @ root_world
+        #     trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
             
         output.update({
             'poses_root_r6d_refined': pred_root,
             'vel_root_refined': pred_vel,
-            'poses_root_world': root_world,
-            'trans_world': trans_world,
+            # 'poses_root_world': root_world,
+            # 'trans_world': trans_world,
         })
         
         return output

@@ -16,7 +16,7 @@ from smplx import SMPL
 from loguru import logger
 
 from configs.config import get_cfg_defaults
-from lib.data._custom import CustomDataset
+from lib.data.datasets import CustomDataset
 from lib.models import build_network, build_body_model
 from lib.models.preproc.detector import DetectionModel
 from lib.models.preproc.extractor import FeatureExtractor

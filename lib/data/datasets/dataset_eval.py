@@ -5,13 +5,12 @@ from __future__ import division
 import os
 import torch
 import joblib
-import numpy as np
 
 from configs import constants as _C
-import lib.utils.data_utils as d_utils
-from lib.utils import transforms
-from lib.utils.kp_utils import root_centering
-from lib.data._dataset import BaseDataset
+from .._dataset import BaseDataset
+from ...utils import transforms
+from ...utils import data_utils as d_utils
+from ...utils.kp_utils import root_centering
 
 FPS = 30
 class EvalDataset(BaseDataset):
@@ -58,7 +57,8 @@ class EvalDataset(BaseDataset):
         target['frame_id'] = self.labels['frame_id'][index][1:]
         
         # Camera information
-        target['cam_intrinsics'] = self.compute_cam_intrinsics(target['res'])
+        self.get_naive_intrinsics(target['res'])
+        target['cam_intrinsics'] = self.cam_intrinsics
         R = self.labels['cam_poses'][index][:, :3, :3].clone()
         if 'emdb' in self.data.lower():
             # Use groundtruth camera angular velocity.
