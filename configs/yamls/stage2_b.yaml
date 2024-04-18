@@ -14,7 +14,7 @@ TRAIN:
   CHECKPOINT: 'checkpoints/wham_stage1.pth.tar'
   BATCH_SIZE: 64
   END_EPOCH: 80
-  MILESTONES: [30, 50, 70]
+  MILESTONES: [40, 50, 70]
   LR_DECAY_RATIO: 0.2
 
 MODEL:

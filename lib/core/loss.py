@@ -184,6 +184,7 @@ class WHAMLoss(nn.Module):
             pred_cam_r,
             gt_cam_r,
             gt_cam_angvel[:, 1:],
+            gt['has_traj'],
             self.criterion_noreduce,
             self.skip_camera_loss
         )
@@ -381,7 +382,7 @@ def smpl_losses(
         mask,
         criterion,
 ):
-    
+
     if mask.any().item():
         loss_regr_pose = torch.mean(
             weight * torch.square(pred_pose - gt_pose)[mask].mean(-1)
@@ -398,10 +399,11 @@ def camera_loss(
     pred_cam_r,
     gt_cam_r,
     cam_angvel,
+    mask,
     criterion,
     skip
 ):
-    mask = (gt_cam_r != 0.0).all(dim=-1).all(dim=-1)
+    # mask = (gt_cam_r != 0.0).all(dim=-1).all(dim=-1)
 
     if mask.any() and not skip:
         # Camera pose loss in 6D representation

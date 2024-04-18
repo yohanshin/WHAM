@@ -85,7 +85,6 @@ class Dataset3D(BaseDataset):
         if self.__name__ != 'ThreeDPW': # 3DPW does not contain world-coordinate motion
             # Foot ground contact labels for Human36M and MPII3D
             target['contact'] = self.labels['stationaries'][start_index+1:end_index+1].clone()
-            # No SMPL vertices available
         else:
             # No foot ground contact label available for 3DPW
             target['contact'] = torch.ones((self.n_frames - 1, 4)) * (-1)
@@ -103,6 +102,7 @@ class Dataset3D(BaseDataset):
                 )
                 target['verts'] = output.vertices.clone()
         else:
+            # No SMPL vertices available
             target['verts'] = torch.zeros((self.n_frames - 1, 6890, 3)).float()
             
         return target
@@ -145,8 +145,9 @@ class Dataset3D(BaseDataset):
 
     def get_single_sequence(self, index):
         # Universal target
-        target = {'has_smpl': torch.tensor(self.has_smpl),
-                  'has_full_screen': torch.tensor(True),
+        target = {'has_full_screen': torch.tensor(True),
+                  'has_smpl': torch.tensor(self.has_smpl),
+                  'has_traj': torch.tensor(self.has_traj),
                   'has_verts': torch.tensor(self.has_verts),
                   'transl': torch.zeros((self.n_frames, 3)),
                   

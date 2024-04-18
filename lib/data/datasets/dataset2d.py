@@ -106,8 +106,9 @@ class Dataset2D(BaseDataset):
         bbox = bbox.repeat(self.n_frames, 1)
         
         # Universal target
-        target = {'has_smpl': torch.tensor(self.has_smpl),
-                  'has_full_screen': torch.tensor(False),
+        target = {'has_full_screen': torch.tensor(False),
+                  'has_smpl': torch.tensor(self.has_smpl),
+                  'has_traj': torch.tensor(self.has_traj),
                   'has_verts': torch.tensor(False),
                   'transl': torch.zeros((self.n_frames, 3)),
                   

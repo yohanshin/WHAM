@@ -40,9 +40,11 @@ class BEDLAMDataset(BaseDataset):
         
         gt_kp3d = target['kp3d']
         inpt_kp3d = self.VideoAugmentor(gt_kp3d[:, :self.n_joints, :-1].clone())
-        kp2d = perspective_projection(inpt_kp3d, target['K'])
+        # kp2d = perspective_projection(inpt_kp3d, target['K'])
+        kp2d = perspective_projection(inpt_kp3d, self.cam_intrinsics)
         mask = self.VideoAugmentor.get_mask()
-        kp2d, bbox = self.keypoints_normalizer(kp2d, target['res'], self.cam_intrinsics, 224, 224, bbox)
+        # kp2d, bbox = self.keypoints_normalizer(kp2d, target['res'], self.cam_intrinsics, 224, 224, bbox)
+        kp2d, bbox = self.keypoints_normalizer(kp2d, target['res'], self.cam_intrinsics, 224, 224)
 
         target['bbox'] = bbox[1:]
         target['kp2d'] = kp2d
@@ -58,7 +60,8 @@ class BEDLAMDataset(BaseDataset):
 
         # GT 1. Joints
         gt_kp3d = target['kp3d']
-        gt_kp2d = perspective_projection(gt_kp3d, target['K'])
+        # gt_kp2d = perspective_projection(gt_kp3d, target['K'])
+        gt_kp2d = perspective_projection(gt_kp3d, self.cam_intrinsics)
         target['kp3d'] = torch.cat((gt_kp3d, torch.ones_like(gt_kp3d[..., :1])), dim=-1)
         # target['full_kp2d'] = torch.cat((gt_kp2d, torch.zeros_like(gt_kp2d[..., :1])), dim=-1)[1:]
         target['full_kp2d'] = torch.cat((gt_kp2d, torch.ones_like(gt_kp2d[..., :1])), dim=-1)[1:]
@@ -141,8 +144,9 @@ class BEDLAMDataset(BaseDataset):
 
 
     def get_single_sequence(self, index):
-        target = {'has_smpl': torch.tensor(True),
-                  'has_full_screen': torch.tensor(True),
+        target = {'has_full_screen': torch.tensor(True),
+                  'has_smpl': torch.tensor(True),
+                  'has_traj': torch.tensor(False),
                   'has_verts': torch.tensor(True),
                   
                   # Null contact label

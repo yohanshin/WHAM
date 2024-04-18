@@ -4,10 +4,12 @@ from __future__ import division
 
 import torch
 from torch import nn
+import numpy as np
 
 from configs import constants as _C
 from lib.models.layers import (MotionEncoder, MotionDecoder, TrajectoryDecoder, TrajectoryRefiner, Integrator, 
                                rollout_global_motion, reset_root_velocity, compute_camera_motion)
+from lib.utils.transforms import axis_angle_to_matrix
 
 
 class Network(nn.Module):
@@ -84,12 +86,12 @@ class Network(nn.Module):
                   'cam': self.pred_cam,
                   'poses_root_cam': self.output.global_orient,
                   'poses_root_r6d': self.pred_root,
+                  'vel_root': self.pred_vel,
+                  'pose_root': self.pred_root,
                   'verts_cam': self.output.vertices}
         
         if self.training:
             output.update({
-                'vel_root': self.pred_vel,
-                'pose_root': self.pred_root,
                 'kp3d': self.output.joints,
                 'kp3d_nn': self.pred_kp3d,
                 'full_kp2d': self.output.full_joints2d,
@@ -104,6 +106,7 @@ class Network(nn.Module):
         
         return output        
     
+    
     def preprocess(self, x, mask):
         self.b, self.f = x.shape[:2]
         
@@ -116,6 +119,22 @@ class Network(nn.Module):
         x[_mask] = 0.0
         x = x + _mask_embedding
         return x
+    
+    
+    def rollout(self, output, pred_root, pred_vel, return_y_up):
+        root_world, trans_world = rollout_global_motion(pred_root, pred_vel)
+        
+        if return_y_up:
+            yup2ydown = axis_angle_to_matrix(torch.tensor([[np.pi, 0, 0]])).float().to(root_world.device)
+            root_world = yup2ydown.mT @ root_world
+            trans_world = (yup2ydown.mT @ trans_world.unsqueeze(-1)).squeeze(-1)
+            
+        output.update({
+            'poses_root_world': root_world,
+            'trans_world': trans_world,
+        })
+        
+        return output
 
         
     def refine_trajectory(self, output, cam_angvel, return_y_up, **kwargs):
@@ -124,6 +143,9 @@ class Network(nn.Module):
         update_vel = reset_root_velocity(self.smpl, self.output, self.pred_contact, self.pred_root, self.pred_vel, thr=0.5)
         output = self.trajectory_refiner(self.old_motion_context, update_vel, output, cam_angvel, return_y_up=return_y_up)
         # --------- #
+        
+        # Do rollout
+        output = self.rollout(output, output['poses_root_r6d_refined'], output['vel_root_refined'], return_y_up)
 
         # ---------  Compute refined feet --------- #
         if self.training:
@@ -134,7 +156,7 @@ class Network(nn.Module):
         
     
     def forward(self, x, inits, img_features=None, mask=None, init_root=None, cam_angvel=None,
-                cam_intrinsics=None, bbox=None, res=None, return_y_up=False, **kwargs):
+                cam_intrinsics=None, bbox=None, res=None, return_y_up=False, refine_traj=True, **kwargs):
 
         x = self.preprocess(x, mask)
         init_kp, init_smpl = inits
@@ -170,7 +192,10 @@ class Network(nn.Module):
         # --------- #
         
         # --------- Refine trajectory --------- #
-        output = self.refine_trajectory(output, cam_angvel, return_y_up)
+        if refine_traj:
+            output = self.refine_trajectory(output, cam_angvel, return_y_up)
+        else:
+            output = self.rollout(output, self.pred_root, self.pred_vel, return_y_up)
         # --------- #
         
         return output

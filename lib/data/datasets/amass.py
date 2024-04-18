@@ -146,8 +146,9 @@ class AMASSDataset(BaseDataset):
     def get_single_sequence(self, index):
         target = {'res': torch.tensor([self.img_w, self.img_h]).float(),
                   'cam_intrinsics': self.cam_intrinsics.clone(),
-                  'has_smpl': torch.tensor(self.supervise_pose),
                   'has_full_screen': torch.tensor(True),
+                  'has_smpl': torch.tensor(self.supervise_pose),
+                  'has_traj': torch.tensor(True),
                   'has_verts': torch.tensor(False),}
         
         target = self.load_amass(index, target)

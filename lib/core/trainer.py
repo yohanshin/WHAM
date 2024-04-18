@@ -82,7 +82,7 @@ class Trainer():
         self.summary_loss_keys = ['pose']
 
         self.evaluation_accumulators = dict.fromkeys(
-            ['pred_j3d', 'target_j3d', 'pred_verts', 'target_verts'])
+            ['pred_j3d', 'target_j3d', 'pve'])# 'pred_verts', 'target_verts'])
         
         self.J_regressor_eval = torch.from_numpy(
             np.load(_C.BMODEL.JOINTS_REGRESSOR_H36M)
@@ -213,8 +213,8 @@ class Trainer():
                 
                 self.evaluation_accumulators['pred_j3d'].append(pred_j3d.numpy())
                 self.evaluation_accumulators['target_j3d'].append(target_j3d.numpy())
-                self.evaluation_accumulators['pred_verts'].append(pred_verts.numpy())
-                self.evaluation_accumulators['target_verts'].append(target_verts.numpy())
+                pve = np.sqrt(np.sum((target_verts.numpy() - pred_verts.numpy()) ** 2, axis=-1)).mean(-1) * 1e3
+                self.evaluation_accumulators['pve'].append(pve[:, None])
                 # =======>
             
                 batch_time = time.time() - start
@@ -241,7 +241,6 @@ class Trainer():
         target_j3ds = torch.from_numpy(target_j3ds).float()
 
         print(f'Evaluating on {pred_j3ds.shape[0]} number of poses...')
-        
         errors = torch.sqrt(((pred_j3ds - target_j3ds) ** 2).sum(dim=-1)).mean(dim=-1).cpu().numpy()
         S1_hat = batch_compute_similarity_transform_torch(pred_j3ds, target_j3ds)
         errors_pa = torch.sqrt(((S1_hat - target_j3ds) ** 2).sum(dim=-1)).mean(dim=-1).cpu().numpy()
@@ -260,8 +259,7 @@ class Trainer():
         }
         
         if 'pred_verts' in self.evaluation_accumulators.keys():
-            pve = np.sqrt(np.sum((self.evaluation_accumulators['target_verts'] - self.evaluation_accumulators['pred_verts']) ** 2, axis=-1)).mean() * 1e3
-            eval_dict.update({'pve': pve})
+            eval_dict.update({'pve': self.evaluation_accumulators['pve'].mean()})
 
         log_str = f'Epoch {self.epoch}, '
         log_str += ' '.join([f'{k.upper()}: {v:.4f},'for k,v in eval_dict.items()])

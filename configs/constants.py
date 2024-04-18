@@ -16,6 +16,7 @@ class PATHS:
     PARSED_DATA = f'{root}/parsed_data'
     AMASS_PTH = f'{root}/AMASS'
     THREEDPW_PTH = f'{root}/3DPW'
+    HUMAN36M_PTH = f'{root}/Human36M'
     RICH_PTH = f'{root}/RICH'
     EMDB_PTH = f'{root}/EMDB'
     

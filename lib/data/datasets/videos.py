@@ -19,6 +19,7 @@ class Human36M(Dataset3D):
         super(Human36M, self).__init__(cfg, parsed_data_path, dset=='train')
 
         self.has_3d = True
+        self.has_traj = True
         self.has_smpl = False
         self.has_verts = False
 
@@ -41,6 +42,7 @@ class MPII3D(Dataset3D):
         super(MPII3D, self).__init__(cfg, parsed_data_path, dset=='train')
         
         self.has_3d = True
+        self.has_traj = True
         self.has_smpl = False
         self.has_verts = False
         
@@ -63,8 +65,9 @@ class ThreeDPW(Dataset3D):
         super(ThreeDPW, self).__init__(cfg, parsed_data_path, dset=='train')
         
         self.has_3d = True
+        self.has_traj = False
         self.has_smpl = True
-        self.has_verts = False  # In testing
+        self.has_verts = True  # In testing
         
         # Among 31 joints format, 14 common joints are avaialable
         self.mask = torch.zeros(_C.KEYPOINTS.NUM_JOINTS + 14)
@@ -90,6 +93,7 @@ class InstaVariety(Dataset2D):
         super(InstaVariety, self).__init__(cfg, parsed_data_path, dset=='train')
         
         self.has_3d = False
+        self.has_traj = False
         self.has_smpl = False
         
         # Among 31 joints format, 17 coco joints are avaialable

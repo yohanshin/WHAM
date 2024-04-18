@@ -82,7 +82,7 @@ python train.py --cfg configs/yamls/stage1.yaml
 ### Stage 2.
 Training stage 2 requires pretrained results from the stage 1. You can use your pretrained results, or download the weight from [Google Drive](https://drive.google.com/file/d/1Erjkho7O0bnZFawarntICRUCroaKabRE/view?usp=sharing) save as `checkpoints/wham_stage1.tar.pth`.
 ```bash
-python train.py --cfg configs/yamls/stage2.yaml TRAIN.CHECKPOINT <path-to-stage1 results>
+python train.py --cfg configs/yamls/stage2.yaml TRAIN.CHECKPOINT <PATH-TO-STAGE1-RESULTS>
 ```
 
 ### Train with BEDLAM
@@ -95,7 +95,7 @@ The base implementation is largely borrowed from [VIBE](https://github.com/mkoca
 
 ## TODO
 
-- [ ] Training implementation
+- [x] Training implementation
 
 - [x] Colab demo release
 
@@ -103,11 +103,12 @@ The base implementation is largely borrowed from [VIBE](https://github.com/mkoca
 
 ## Citation
 ```
-@article{shin2023wham,
-    title={WHAM: Reconstructing World-grounded Humans with Accurate 3D Motion},
-    author={Shin, Soyong and Kim, Juyong and Halilaj, Eni and Black, Michael J.},
-    journal={arXiv preprint 2312.07531},
-    year={2023}}
+@InProceedings{shin2023wham,  
+title={WHAM: Reconstructing World-grounded Humans with Accurate 3D Motion},
+author={Shin, Soyong and Kim, Juyong and Halilaj, Eni and Black, Michael J.},  
+booktitle={Computer Vision and Pattern Recognition (CVPR)},  
+year={2024}  
+}  
 ```
 
 ## License
